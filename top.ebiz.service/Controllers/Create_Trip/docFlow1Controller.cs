@@ -1,24 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class docFlow1Controller : ApiController
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class docFlow1Controller : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public docFlow1Controller(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
+    { 
         // GET: api/docFlow1
         public IEnumerable<string> Get()
         {
@@ -32,7 +20,7 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/docFlow1
-        [HttpPost]
+        [HttpPost("docFlow1", Name = "docFlow1")]
         public IActionResult Post([FromBody] DocModel value)
         {
             if (value == null) return null;

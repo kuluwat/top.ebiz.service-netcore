@@ -3,25 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;  // For JSON Serialization
 using top.ebiz.service.Models;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
+using top.ebiz.service.Service.Create_Trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
 {
-    [ApiController]
-    [Route("api/[controller]")]
     public class DocFlow2Controller : ControllerBase
     {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public DocFlow2Controller(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
-
         // GET: api/docFlow2
         public IEnumerable<string> Get()
         {
@@ -36,7 +23,7 @@ namespace top.ebiz.service.Controllers.Create_Trip
             return "value";
         }
 
-        [HttpPost]
+        [HttpPost("docFlow2", Name = "docFlow2")]
         public IActionResult Post([FromBody] DocFlow2Model value)
         {
             if (value == null)
@@ -51,7 +38,8 @@ namespace top.ebiz.service.Controllers.Create_Trip
             logService.insertLog(mLog);
 
             // Call service method
-            var result = _documentService.submitFlow2_v3(value);
+            var service = new documentService();
+            var result = service.submitFlow2_v3(value);
 
             // Serialize the result to JSON
             var json = JsonSerializer.Serialize(result);

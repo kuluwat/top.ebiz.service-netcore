@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Web;
 
@@ -27,6 +28,8 @@ namespace top.ebiz.service.Models.Create_Trip
         public string checkbox_1 { get; set; }
         public string checkbox_2 { get; set; }
         public string remark { get; set; }
+
+        [NotMapped]
         public afterTripModel after_trip { get; set; } = new afterTripModel();
         public List<DocList4TravelerListModel> traveler_list { get; set; } = new List<DocList4TravelerListModel>();
         public List<DocList4TravelerSummaryListModel> traveler_summary { get; set; } = new List<DocList4TravelerSummaryListModel>();

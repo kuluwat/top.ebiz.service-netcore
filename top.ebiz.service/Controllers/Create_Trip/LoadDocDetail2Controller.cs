@@ -1,27 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class LoadDocDetail2Controller : ApiController
-
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class LoadDocDetail2Controller : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public LoadDocDetail2Controller(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
-
+    {  
         // GET: api/LoadDocDetail2
         public IEnumerable<string> Get()
         {
@@ -35,25 +20,24 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/LoadDocDetail2
-        [HttpPost]
+        [HttpPost("LoadDocDetail2", Name = "LoadDocDetail2")]
         public IActionResult Post([FromBody] DocDetailSearchModel value)
         {
             if (value == null) return null;
+             
+            // Use System.Text.Json to serialize the object
+            var mLog = new logModel { module = "DOCUMENT2(DETAIL)", tevent = "SEARCH", ref_id = 0, data_log = JsonSerializer.Serialize(value) };
 
-
-            logModel mLog = new logModel();
-            mLog.module = "DOCUMENT2(DETAIL)";
-            mLog.tevent = "SEARCH";
-            mLog.ref_id = 0;
-            mLog.data_log = JsonSerializer.Serialize(value);
+            // Insert log
             logService.insertLog(mLog);
 
-            searchDocService service = new searchDocService();
-            HttpResponseMessage response = null;
-            object result = service.searchDetail2(value);
+            // Call service method  
+            searchDocServices service = new searchDocServices();
+            object result = service.SearchDetail2(value);
 
             // Serialize the result to JSON
             var json = JsonSerializer.Serialize(result);
+              
             return Ok(json);
         }
 

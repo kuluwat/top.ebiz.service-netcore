@@ -47,5 +47,6 @@ namespace top.ebiz.service
         public string DH_EXPENSE_OPT2 { get; set; }
         public string DH_EXPENSE_REMARK { get; set; }
         public string DH_REMARK_REJECT { get; set; }
+        public string DH_TYPE_FLOW { get; set; }
     }
 }

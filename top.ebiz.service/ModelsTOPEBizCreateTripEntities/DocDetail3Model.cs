@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Web;
 
@@ -27,7 +28,13 @@ namespace top.ebiz.service.Models.Create_Trip
         public string checkbox_1 { get; set; }
         public string checkbox_2 { get; set; }
         public string remark { get; set; }
+
+        [NotMapped]
         public afterTripModel after_trip { get; set; } = new afterTripModel();
+<<<<<<<< HEAD:top.ebiz.service/ModelsTOPEBizCreateTripEntities/DocDetail3Model.cs
+========
+
+>>>>>>>> 482f1d7a636a59ab02679f00e730220c207cdee4:top.ebiz.service/Models/Create_Trip/DocDetail3Model.cs
         public List<travelerList> traveler_list { get; set; } = new List<travelerList>();
         public List<travelerSummaryList> traveler_summary { get; set; } = new List<travelerSummaryList>();
 
@@ -159,7 +166,11 @@ namespace top.ebiz.service.Models.Create_Trip
         public string DF_PATH { get; set; }
         public string DF_REMARK { get; set; }
 
+<<<<<<<< HEAD:top.ebiz.service/ModelsTOPEBizCreateTripEntities/DocDetail3Model.cs
         [Not Map]
+========
+        [NotMapped]
+>>>>>>>> 482f1d7a636a59ab02679f00e730220c207cdee4:top.ebiz.service/Models/Create_Trip/DocDetail3Model.cs
         public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
 }

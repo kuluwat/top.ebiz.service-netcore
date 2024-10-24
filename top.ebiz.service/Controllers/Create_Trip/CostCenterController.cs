@@ -1,28 +1,17 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
 {
     //public class CostCenterController : ApiController
 
-    [ApiController]
-    [Route("api/[controller]")]
+    ////[ApiController]
+    ////[Route("api/[controller]")]
     public class CostCenterController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public CostCenterController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
+    { 
         // GET: api/CostCenter
         public IEnumerable<string> Get()
         {
@@ -36,7 +25,7 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/CostCenter
-        [HttpPost]
+        [HttpPost("CostCenter", Name = "CostCenter")]
         public IActionResult Post([FromBody] CCInputModel value)
         {
             if (value == null) return null;

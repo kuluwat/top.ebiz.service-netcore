@@ -1,28 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class LoadDocListController : ApiController
-
-
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class LoadDocListController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public LoadDocListController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
-
+    { 
         // GET: api/LoadDocList
         public IEnumerable<string> Get()
         {
@@ -36,25 +20,25 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/LoadDocList
-        [HttpPost]
+        [HttpPost("LoadDocList", Name = "LoadDocList")]
         public IActionResult Post([FromBody] SearchDocumentModel value)
         {
             if (value == null) return null;
+              
+            // Use System.Text.Json to serialize the object
+            var mLog = new logModel { module = "DOCUMENT(LIST)", tevent = "SEARCH", ref_id = 0, data_log = JsonSerializer.Serialize(value) };
 
-
-            logModel mLog = new logModel();
-            mLog.module = "DOCUMENT(LIST)";
-            mLog.tevent = "SEARCH";
-            mLog.ref_id = 0;
-            mLog.data_log = JsonSerializer.Serialize(value);
+            // Insert log
             logService.insertLog(mLog);
 
-            searchDocService service = new searchDocService();
-            HttpResponseMessage response = null;
-            object result = service.searchDocument(value);
+            // Call service method  
+            searchDocServices service = new searchDocServices();
+            object result = service.SearchDocuments(value);
 
             // Serialize the result to JSON
             var json = JsonSerializer.Serialize(result);
+
+
             return Ok(json);
         }
 

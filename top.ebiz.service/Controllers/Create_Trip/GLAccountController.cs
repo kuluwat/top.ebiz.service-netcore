@@ -1,26 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class GLAccountController : ApiController
-
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class GLAccountController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public GLAccountController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
+    { 
         // GET: api/GLAccount
         public IEnumerable<string> Get()
         {
@@ -34,12 +20,11 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/GLAccount
-        [HttpPost]
+        [HttpPost("GLAccount", Name = "GLAccount")]
         public IActionResult Post([FromBody] GLInputModel value)
         {
             if (value == null) return null;
-
-
+             
             //logModel mLog = new logModel();
             //mLog.module = "EMPLOYEE";
             //mLog.tevent = "SEARCH";

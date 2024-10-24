@@ -2,27 +2,13 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class TravelerSummaryController : ApiController
-
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class TravelerSummaryController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public TravelerSummaryController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
+    { 
         // GET: api/TravelerSummary
         public IEnumerable<string> Get()
         {
@@ -30,12 +16,11 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/TravelerSummary
-        [HttpPost]
+        [HttpPost("TravelerSummary", Name = "TravelerSummary")]
         public IActionResult Post([FromBody] TravelerSummaryModel value)
         {
             HttpResponseMessage response = null;
-
-
+             
             logModel mLog = new logModel();
             mLog.module = "TAB2";
             mLog.tevent = "APPROVER";

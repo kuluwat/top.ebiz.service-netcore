@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿
 using System.Data;
 using System.Data.Common;
-using System.Linq;
-using System.Web;
 using Oracle.ManagedDataAccess.Client;
-using System.DirectoryServices;
-using System.Linq;
-using System.Data;
+
 using Microsoft.EntityFrameworkCore;
 using top.ebiz.service.Models.Create_Trip;
 
-namespace top.ebiz.service.Service.Create_trip
+namespace top.ebiz.service.Service.Create_Trip
 {
     public class userAuthenService
     {
@@ -19,7 +14,7 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new List<loginProfileResultModel>();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
@@ -56,7 +51,7 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new loginResultModel();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
@@ -68,13 +63,6 @@ namespace top.ebiz.service.Service.Create_trip
                     string token_login = Guid.NewGuid().ToString();
                     cmd.Parameters.Add(new OracleParameter("p_token", token_login));
                     cmd.Parameters.Add(new OracleParameter("p_user_id", value.user_id));
-
-                    //OracleParameter oraP = new OracleParameter();
-                    //oraP.ParameterName = "token_login";
-                    ////oraP.OracleDbType = OracleDbType.RefCursor;
-                    ////oraP.Direction = ParameterDirection.Output;
-                    //
-                    //cmd.Parameters.Add(token_login);
 
                     try
                     {
@@ -99,81 +87,53 @@ namespace top.ebiz.service.Service.Create_trip
             return data;
         }
 
-        public List<Users> GetADUsers(string UserName, string Password)
+        public List<Users> GetADUsers(string UserName)
         {
+            //DevFix 20241017 0000 ดึงข้อมูลจาก Table 
+            List<Users> lstADUsers = new List<Users>();
+
             try
             {
-                List<Users> lstADUsers = new List<Users>();
-                //string DomainPath = "LDAP://DC=xxxx,DC=com";
-                //DirectoryEntry searchRoot = new DirectoryEntry(DomainPath);
-                //DirectorySearcher search = new DirectorySearcher(searchRoot);
-                string domain = "";// ddlCompany.SelectedItem.Text;//   '"IPT"
-                domain = "ThaioilNT";
-                string str = string.Format("LDAP://{0}", domain);
-                string str2 = string.Format("{0}\\" + UserName.Trim(), domain);
-                string pass = Password;
-                DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
-                DirectorySearcher search = new DirectorySearcher(Entry);
-                //SearchResultCollection results;
-                search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*))";
-                search.PropertiesToLoad.Add("samaccountname");
-                search.PropertiesToLoad.Add("mail");
-                search.PropertiesToLoad.Add("usergroup");
-                search.PropertiesToLoad.Add("displayname");//first name
-                                                           //search.PropertiesToLoad.Add("memberOf");
-                SearchResult result;
-                SearchResultCollection resultCol = search.FindAll();
-
-
-                //SearchResult xxx = search.FindOne();
-                if (resultCol != null)
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
-                    for (int counter = 0; counter < resultCol.Count; counter++)
+                    using (var connection = context.Database.GetDbConnection())
                     {
-                        string UserNameEmailString = string.Empty;
-                        result = resultCol[counter];
-                        if (result.Properties.Contains("samaccountname") &&
-                                 result.Properties.Contains("mail") &&
-                            result.Properties.Contains("displayname"))
+                        connection.Open();
+
+                        //DevFix 20241017 0000 ที่จริงต้องเอามาจาก AzureAD เนื่องจากจะเอาไปตรวจสอบว่า User ที่ Login เข้ามา ถ้าเป็น z user ให้ Add เพิ่ม
+                        var dt = context.VW_BZ_USERS
+                         .FromSqlRaw("select email, userdisplay  from vw_bz_users h where lower(userid) = lower(:userid) "
+                        , context.ConvertTypeParameter("userid", UserName, "char")).ToList();
+
+                        if (dt != null)
                         {
+                            if (dt?.Count > 0)
+                            {
+                                Users objSurveyUsers = new Users();
+                                objSurveyUsers.Email = dt[0].EMAIL;
+                                objSurveyUsers.UserName = dt[0].USERID;
+                                objSurveyUsers.DisplayName = dt[0].USERDISPLAY;
 
-                            Users objSurveyUsers = new Users();
-                            objSurveyUsers.Email = (string)result.Properties["mail"][0] +
-                              "^" + (string)result.Properties["displayname"][0];
-                            objSurveyUsers.UserName = (string)result.Properties["samaccountname"][0];
-                            objSurveyUsers.DisplayName = (string)result.Properties["displayname"][0];
-                            //objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
-                            lstADUsers.Add(objSurveyUsers);
-
+                                lstADUsers.Add(objSurveyUsers);
+                            }
                         }
 
                     }
                 }
-
-
-                return lstADUsers;
             }
-            catch (Exception ex)
-            {
-                return null;
-            }
-
+            catch { }
+            return lstADUsers;
         }
 
         public loginWebResultModel loginWeb(loginClientModel value)
         {
-            value.user = (value.user ?? "") == "" ? "" : value.user.ToUpper();
+            value.user = (value.user ?? "") == "" ? "" : value.user ?? "".ToUpper();
 
-            string xuser_ad = value.user;
-            string xpass_ad = value.pass;
-            if (value.pass == "admin")
-            {
-                xuser_ad = "zad";
-            }
+            string xuser_ad = value.user; //email
 
-            string token_login = Guid.NewGuid().ToString();
+            string token_login = Guid.NewGuid().ToString() ?? "";
             var data = new loginWebResultModel();
-            var userList = GetADUsers(xuser_ad, xpass_ad);
+            var userList = GetADUsers(xuser_ad);
             if (userList == null)
             {
                 if (value.pass == "admin")
@@ -218,15 +178,19 @@ namespace top.ebiz.service.Service.Create_trip
             #endregion DevFix 20201209 1100 เพิ่มเงื่อนไขกรณีที่เป็น pass : admin ให้สามารถเข้าระบบได้เลย เนื่องจากอาจจะเป็นการทดสอบระบบ ของ admin
 
 
-
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
                     connection.Open();
-                    string sql = "select EMPLOYEEID from BZ_USERS where upper(userid) = '" + value.user.ToUpper() + "'";
+                    //string sql = "select EMPLOYEEID from BZ_USERS where upper(userid) = '" + value.user.ToUpper() + "'";
+                    //var user = context.Database.SqlQuery<loginUserResultModel>(sql).ToList();
+                    var userid = value.user ?? "";
+                    var userdisplay = userList[0].DisplayName.ToString() ?? "";
+                    var user = context.BZ_USERS
+                         .FromSqlRaw("select upper(userid) as userid, employeeid from BZ_USERS where upper(userid) = upper(:userid) "
+                         , context.ConvertTypeParameter("userid", userid, "char")).ToList();
 
-                    var user = context.Database.SqlQuery<loginUserResultModel>(sql).ToList();
                     if (user != null && user.Count() > 0)
                     {
                         DbCommand cmd = connection.CreateCommand();
@@ -235,7 +199,7 @@ namespace top.ebiz.service.Service.Create_trip
                         //string token_login = Guid.NewGuid().ToString();//DevFix 20201209 1100ยกไปส่วนบน
                         cmd.Parameters.Add(new OracleParameter("p_token", token_login));
                         cmd.Parameters.Add(new OracleParameter("p_user_id", user[0].EMPLOYEEID));
-                        cmd.Parameters.Add(new OracleParameter("p_user_name", value.user.ToUpper()));
+                        cmd.Parameters.Add(new OracleParameter("p_user_name", user[0].USERID));
                         try
                         {
                             cmd.ExecuteNonQuery();
@@ -254,28 +218,26 @@ namespace top.ebiz.service.Service.Create_trip
                         //data.name = "invalid username or password!";
                         #region DevFix 20201209 1100 กรณีที่เป็น user z ที่ผ่านการ login ad แล้ว
                         bool bUserAD = false;
-                        sql = "select EMPLOYEEID from BZ_USERS_AD where upper(userid) = '" + value.user.ToUpper() + "'";
-                        user = new List<loginUserResultModel>();
-                        user = context.Database.SqlQuery<loginUserResultModel>(sql).ToList();
+                        //sql = "select EMPLOYEEID from BZ_USERS_AD where upper(userid) = '" + value.user.ToUpper() + "'";
+                        //user = new List<loginUserResultModel>();
+                        //user = context.Database.SqlQuery<loginUserResultModel>(sql).ToList();
+
+                        user = context.BZ_USERS
+                   .FromSqlRaw("select upper(userid) as userid, employeeid from BZ_USERS_AD where upper(userid) = upper(:userid) "
+                   , context.ConvertTypeParameter("userid", userid, "char")).ToList();
+
                         if (user != null && user.Count() > 0)
                         {
                             bUserAD = true;
                         }
                         else
                         {
-                            //Get Max EMPLOYEEID (autogenarate) --> bz_sp_add_user_ad  
-                            //create or replace procedure bz_sp_add_user_ad(p_token varchar2, p_user_id varchar2, p_user_name varchar2) IS 
-                            //  BEGIN 
-                            //  insert into BZ_TRANS_LOG(MODULE, USER_TOKEN, LASTUPDATED_LOG) values('ADD USER AD', p_user_name, sysdate); 
-                            //  insert into BZ_USERS_AD(EMPLOYEEID, USERID, ENFIRSTNAME, UPDATEDDATE)
-                            //  values((select nvl(max(to_number(EMPLOYEEID)), 90000000) + 1 from BZ_USERS_AD ) , p_user_id, p_user_name, sysdate); 
-                            //  END bz_sp_add_user_ad;
-
+                            //Get Max EMPLOYEEID (autogenarate) --> bz_sp_add_user_ad   
                             DbCommand cmd = connection.CreateCommand();
                             cmd.CommandText = "bz_sp_add_user_ad";
                             cmd.CommandType = CommandType.StoredProcedure;
                             cmd.Parameters.Add(new OracleParameter("p_token", token_login));
-                            cmd.Parameters.Add(new OracleParameter("p_user_id", value.user.ToUpper()));
+                            cmd.Parameters.Add(new OracleParameter("p_user_id", userid));
                             cmd.Parameters.Add(new OracleParameter("p_user_name", userList[0].DisplayName.ToString()));
                             try
                             {
@@ -292,10 +254,12 @@ namespace top.ebiz.service.Service.Create_trip
 
                         if (bUserAD == true)
                         {
-                            sql = "select EMPLOYEEID from BZ_USERS_AD where upper(userid) = '" + value.user.ToUpper() + "'";
-                            user = new List<loginUserResultModel>();
-                            user = context.Database.SqlQuery<loginUserResultModel>(sql).ToList();
-
+                            //sql = "select EMPLOYEEID from BZ_USERS_AD where upper(userid) = '" + value.user.ToUpper() + "'";
+                            //user = new List<loginUserResultModel>();
+                            //user = context.Database.SqlQuery<loginUserResultModel>(sql).ToList();
+                            user = context.BZ_USERS
+                   .FromSqlRaw("select upper(userid) as userid, employeeid from BZ_USERS_AD where upper(userid) = upper(:userid) "
+                   , context.ConvertTypeParameter("userid", userid, "char")).ToList();
                             if (user != null && user.Count() > 0)
                             {
                                 DbCommand cmd = connection.CreateCommand();
@@ -304,7 +268,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //string token_login = Guid.NewGuid().ToString();//DevFix 20201209 1100ยกไปส่วนบน
                                 cmd.Parameters.Add(new OracleParameter("p_token", token_login));
                                 cmd.Parameters.Add(new OracleParameter("p_user_id", user[0].EMPLOYEEID));
-                                cmd.Parameters.Add(new OracleParameter("p_user_name", value.user.ToUpper()));
+                                cmd.Parameters.Add(new OracleParameter("p_user_name", userdisplay));
                                 try
                                 {
                                     cmd.ExecuteNonQuery();
@@ -337,7 +301,7 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new loginResultModel();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {

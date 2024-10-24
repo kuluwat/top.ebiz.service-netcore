@@ -1,25 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class CountryController : ApiController
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class CountryController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public CountryController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
+    { 
         // GET: api/Country
         public IEnumerable<string> Get()
         {
@@ -32,19 +19,18 @@ namespace top.ebiz.service.Controllers.Create_Trip
             return "value";
         }
 
-        // POST: api/Country
-        [HttpPost]
+        // POST: api/Country 
+        [HttpPost("Country", Name = "Country")]
         public IActionResult Post([FromBody] CountryModel value)
         {
             if (value == null) return null;
 
-
-            //logModel mLog = new logModel();
-            //mLog.module = "COUNTRY";
-            //mLog.tevent = "GET";
-            //mLog.ref_id = 0;
-            //mLog.data_log = JsonSerializer.Serialize(value);
-            //logService.insertLog(mLog);
+            logModel mLog = new logModel();
+            mLog.module = "COUNTRY";
+            mLog.tevent = "GET";
+            mLog.ref_id = 0;
+            mLog.data_log = JsonSerializer.Serialize(value);
+            logService.insertLog(mLog);
 
 
             HttpResponseMessage response = null;

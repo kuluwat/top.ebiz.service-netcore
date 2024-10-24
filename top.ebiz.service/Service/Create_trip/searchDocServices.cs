@@ -6,10 +6,11 @@ using Microsoft.EntityFrameworkCore;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Microsoft.AspNetCore.Http.HttpResults;
 using top.ebiz.service.Models.Create_Trip;
+using Microsoft.Exchange.WebServices.Data;
 
-namespace top.ebiz.service.Service.Create_trip
+namespace top.ebiz.service.Service.Create_Trip
 {
-    public class SearchDocServices
+    public class searchDocServices
     {
         string sql = "";
 
@@ -36,7 +37,7 @@ namespace top.ebiz.service.Service.Create_trip
                     stop_date = value.business.stop.Substring(0, 10);
             }
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 string user_id = "";
                 string user_admin = "";
@@ -46,7 +47,7 @@ namespace top.ebiz.service.Service.Create_trip
                 var token_login = value.token_login;
 
 
-                login_empid = context.SearchUserModels.FromSqlRaw("SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role " +
+                login_empid = context.SearchUserModelList.FromSqlRaw("SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role " +
                     "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid WHERE a.TOKEN_CODE = {0}", token_login).ToList();
                 if (login_empid != null && login_empid.Count() > 0)
                 {
@@ -59,7 +60,7 @@ namespace top.ebiz.service.Service.Create_trip
                     {
                         //sql = "select emp_id from bz_data_manage where pmdv_admin = 'true' and emp_id = '" + user_id + "'";
                         //pmdv_admin_list = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                        pmdv_admin_list = context.SearchUserModels.FromSqlRaw("select emp_id from bz_data_manage where pmdv_admin = 'true' and emp_id = {0}", user_id).ToList();
+                        pmdv_admin_list = context.SearchUserModelList.FromSqlRaw("select emp_id from bz_data_manage where pmdv_admin = 'true' and emp_id = {0}", user_id).ToList();
                         if (pmdv_admin_list != null && pmdv_admin_list.Count() > 0)
                         {
                             user_admin = "admin";
@@ -109,8 +110,7 @@ namespace top.ebiz.service.Service.Create_trip
                         //DevFix 20211014 0000 ข้อมูล person ต้องไม่รวมจำนวน user ที่ถูก reject ???
 
                         var dh_person = new List<StatusDocModel>();
-                        //dh_person = context.Database.SqlQuery<StatusDocModel>(sql).ToList();
-                        dh_person = context.StatusDocModels.FromSqlRaw("select  to_char(count(dte_emp_id)) as dh_doc_status, to_char(dh_code) as dh_code " +
+                        dh_person = context.StatusDocModelList.FromSqlRaw("select  to_char(count(dte_emp_id)) as dh_doc_status, to_char(dh_code) as dh_code " +
                             "from (  select distinct dte_emp_id, dh_code from bz_doc_traveler_expense where (nvl(dte_appr_status,1) not in (30) or nvl(dte_cap_appr_status,1) not in (40)) " +
                             " and nvl(dte_cap_appr_status,1) not in (40)" +
                             " and(nvl(dte_appr_opt, 'true') = 'true' and nvl(dte_cap_appr_opt, 'true') = 'true'))t group by dh_code").ToList();
@@ -128,19 +128,22 @@ namespace top.ebiz.service.Service.Create_trip
                             string sql1 = "SELECT DISTINCT 'true' AS dh_doc_status FROM BZ_DOC_HEAD h " +
                                 "INNER JOIN BZ_DOC_TRAVELER_EXPENSE a ON h.dh_code = a.dh_code " +
                                 "WHERE SUBSTR(h.dh_doc_status, 0, 1) IN (3, 4, 5)" +
-                                "AND a.dte_appr_status IN (23, 32, 42) AND h.dh_code = {0}";
+                                "AND a.dte_appr_status IN (23, 32, 42) AND h.dh_code = :doc_id ";
 
                             // Second SQL query
                             string sql2 = "SELECT DISTINCT 'true' AS dh_doc_status FROM BZ_DOC_HEAD h" +
                                 "INNER JOIN BZ_DOC_TRAVELER_EXPENSE a ON h.dh_code = a.dh_code" +
                                 "INNER JOIN BZ_DOC_TRAVELER_APPROVER b ON h.dh_code = b.dh_code" +
-                                "WHERE b.dta_action_status = 4 AND h.dh_code = {0}";
+                                "WHERE b.dta_action_status = 4 AND h.dh_code = :doc_id ";
 
-
-                            dh_status = context.StatusDocModels.FromSqlRaw(sql1, item.doc_id).ToList();
+                            var parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", item.doc_id, "char"));
+                            dh_status = context.StatusDocModelList.FromSqlRaw(sql1, parameters.ToArray()).ToList();
 
                             /*** testing the use a bracket instead of .ToList();***/
-                            dh_status.AddRange([.. context.StatusDocModels.FromSqlRaw(sql2, item.doc_id)]);
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", item.doc_id, "char"));
+                            dh_status.AddRange([.. context.StatusDocModelList.FromSqlRaw(sql2, item.doc_id)]);
 
                             if (dh_status != null)
                             {
@@ -157,7 +160,7 @@ namespace top.ebiz.service.Service.Create_trip
                             item.status_trip_cancelled = "false";
                             // sql = " select distinct nvl(STATUS_TRIP_CANCELLED,'false') as dh_doc_status from BZ_DOC_TRAVELEXPENSE where doc_id = '" + item.doc_id + "' ";
                             // dh_status = context.Database.SqlQuery<StatusDocModel>(sql).ToList();
-                            dh_status = context.StatusDocModels.FromSqlRaw("select distinct nvl(STATUS_TRIP_CANCELLED,'false') as dh_doc_status from BZ_DOC_TRAVELEXPENSE where doc_id ={0}", item.doc_id).ToList();
+                            dh_status = context.StatusDocModelList.FromSqlRaw("select distinct nvl(STATUS_TRIP_CANCELLED,'false') as dh_doc_status from BZ_DOC_TRAVELEXPENSE where doc_id ={0}", item.doc_id).ToList();
                             if (dh_status != null)
                             {
                                 if (dh_status.Count > 0)
@@ -239,24 +242,22 @@ namespace top.ebiz.service.Service.Create_trip
             string user_type = "2";
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
                     string sql = "";
                     var id_doc = value.id_doc;
                     var token_login = value.token_login;
 
-                    var docHeadStatus = new List<DocHeadModel>();
-                    // sql = " select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = '" + value.id_doc + "' ";
-                    // docHeadStatus = context.Database.SqlQuery<DocHeadModel>(sql).ToList();
-                    docHeadStatus = [.. context.DocHeadModels.FromSqlRaw("select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char"))];
-
+                    var docHeadStatus = context.DocHeadModelList.FromSqlRaw(
+                        "select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = :id_doc"
+                        , context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
 
                     var login_empid = new List<SearchUserModel>();
                     // sql = "SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ";
                     //DevFix 20210622 0000 เพิ่มข้อมูล ประเภทพนักงาน
 
-                    login_empid = context.SearchUserModels.FromSqlRaw(" SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ,u.usertype as user_type " +
+                    login_empid = context.SearchUserModelList.FromSqlRaw(" SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ,u.usertype as user_type " +
                     " FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid " +
                     " WHERE a.TOKEN_CODE = :token_login", context.ConvertTypeParameter("token_login", token_login, "char")).ToList();
 
@@ -269,7 +270,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                     //หาว่า  type นี้เป็น oversea หรือ local
 
-                    docCheckTab = context.DocList2Models.FromSqlRaw(" select DH_CODE , DH_TYPE type, DH_EXPENSE_OPT1 checkbox_1, DH_EXPENSE_OPT2 checkbox_2, DH_EXPENSE_REMARK remark , to_char(DH_DOC_STATUS) doc_status ," +
+                    docCheckTab = context.DocList2ModelList.FromSqlRaw(" select DH_CODE , DH_TYPE type, DH_EXPENSE_OPT1 checkbox_1, DH_EXPENSE_OPT2 checkbox_2, DH_EXPENSE_REMARK remark , to_char(DH_DOC_STATUS) doc_status ," +
                     " b.TS_NAME document_status, a.DH_TYPE_FLOW from BZ_DOC_HEAD a left join BZ_MASTER_STATUS b on a.DH_DOC_STATUS=b.TS_ID " +
                     " WHERE DH_CODE = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                     // if (docCheckTab != null) { }
@@ -284,12 +285,10 @@ namespace top.ebiz.service.Service.Create_trip
                     //เนื่องจากไม่สามารถ up dataset model ได้ให้ใช้ DTE_TOKEN แทน
 
 
-
-
                     var docStatusPrefix = docCheckTab[0].doc_status.ToString().Substring(0, 1);
                     var docStatus = docCheckTab[0].doc_status.ToString();
 
-                    traveler = context.TravelerDocModels.FromSqlRaw("SELECT a.DTE_EMP_ID AS emp_id, NVL(b.ENTITLE, '') || ' ' || b.ENFIRSTNAME || ' ' || b.ENLASTNAME AS emp_name, " +
+                    traveler = context.TravelerDocModelList.FromSqlRaw("SELECT a.DTE_EMP_ID AS emp_id, NVL(b.ENTITLE, '') || ' ' || b.ENFIRSTNAME || ' ' || b.ENLASTNAME AS emp_name, " +
                         " b.ORGNAME AS emp_organization, TO_CHAR(a.CTN_ID) AS continent_id, c.CTN_NAME AS continent, a.CITY_TEXT AS city, TO_CHAR(a.CT_ID) AS country_id, d.CT_NAME AS country_name, " +
                         " TO_CHAR(e.PV_ID) AS province_id, e.PV_NAME AS province_name, CASE WHEN a.DTE_BUS_FROMDATE IS NULL THEN '' ELSE TO_CHAR(a.DTE_BUS_FROMDATE, 'YYYY-MM-DD') END AS business_date_start, " +
                         " CASE WHEN a.DTE_BUS_TODATE IS NULL THEN '' ELSE TO_CHAR(a.DTE_BUS_TODATE, 'YYYY-MM-DD') END AS business_date_stop, " +
@@ -312,12 +311,10 @@ namespace top.ebiz.service.Service.Create_trip
                     {
                         #region DevFix 20210714 0000 ดึงข้อมูลรายละเอียด approver เดิม
 
-
-
                         var pf_doc_id = docHeadStatus[0].document_status.Substring(0, 1);
                         var bCheckPF_CAP = true; // When Line submits to CAP but CAP is not yet active
 
-                        var dataCheck_Def = context.TravelerApproverConditionModels
+                        var dataCheck_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw("SELECT TO_CHAR(COUNT(1)) AS approve_status FROM BZ_DOC_TRAVELER_APPROVER a " +
                             " WHERE dta_action_status > 2 AND a.dta_type = 2 AND dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
@@ -360,37 +357,37 @@ namespace top.ebiz.service.Service.Create_trip
                         sql += " ORDER BY dta_appr_level";
 
                         // Run the main approver query
-                        var dataApprover_Def = context.TravelerApproverConditionModels
+                        var dataApprover_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                             .ToList();
 
                         #region DevFix 20211013 0000 กรณีที่เป็น step cap ให้ตรวจสอบ line ว่ามีการ reject หรือไม่
                         // Additional queries for various approver lines and CAP conditions
-                        var dataApproverLine_Def = context.TravelerApproverConditionModels
+                        var dataApproverLine_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                             .ToList();
 
-                        var dataApproverLine2_Def = context.TravelerApproverConditionModels
+                        var dataApproverLine2_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                             .ToList();
 
-                        var dataApproverLine3_Def = context.TravelerApproverConditionModels
+                        var dataApproverLine3_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                             .ToList();
 
-                        var dataApproverCAP_Def = context.TravelerApproverConditionModels
+                        var dataApproverCAP_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                             .ToList();
 
-                        var dataApproverCAP2_Def = context.TravelerApproverConditionModels
+                        var dataApproverCAP2_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                             .ToList();
 
-                        var dataApproverCAP3_Def = context.TravelerApproverConditionModels
+                        var dataApproverCAP3_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                             .ToList();
 
-                        var dataApproverRevise_Def = context.TravelerApproverConditionModels
+                        var dataApproverRevise_Def = context.TravelerApproverConditionModelList
                             .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                             .ToList();
 
@@ -405,7 +402,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //              from BZ_DOC_TRAVELER_EXPENSE a 
                             //              where dte_appr_opt = 'true' and dte_status = 1 and dte_appr_status <> 23
                             //              and dh_code = '" + value.id_doc + "' ";
-                            dataApproverLine_Def = context.TravelerApproverConditionModels.FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id," +
+                            dataApproverLine_Def = context.TravelerApproverConditionModelList.FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id," +
                                 "'3' as approve_status, dte_appr_remark as approve_remark from BZ_DOC_TRAVELER_EXPENSE a where dte_appr_opt = 'true' and dte_status = 1 " +
                             "and dte_appr_status <> 23 and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
@@ -416,7 +413,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //             from BZ_DOC_TRAVELER_EXPENSE a 
                             //             where ((dte_appr_opt = 'false' and dte_status = 1) or dte_appr_status = 30 )
                             //             and dh_code = '" + value.id_doc + "' ";
-                            dataApproverLine2_Def = context.TravelerApproverConditionModels.FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
+                            dataApproverLine2_Def = context.TravelerApproverConditionModelList.FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
                                 "'5' as approve_status, dte_appr_remark as approve_remark from BZ_DOC_TRAVELER_EXPENSE a where ((dte_appr_opt = 'false' and dte_status = 1) " +
                                 "or dte_appr_status = 30 ) and dh_code =:id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
@@ -425,7 +422,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //             , '2' as approve_status, dte_appr_remark as approve_remark
                             //             from BZ_DOC_TRAVELER_EXPENSE a 
                             //             where dte_status = 1 and dte_appr_status = 31 and dh_code = '" + value.id_doc + "' ";
-                            dataApproverLine3_Def = context.TravelerApproverConditionModels.FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
+                            dataApproverLine3_Def = context.TravelerApproverConditionModelList.FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
                                 " '2' as approve_status, dte_appr_remark as approve_remark from BZ_DOC_TRAVELER_EXPENSE a " +
                                 " where dte_status = 1 and dte_appr_status = 31 and dh_code =:id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
@@ -437,7 +434,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //and dte_cap_appr_opt = 'true' and dte_appr_opt = 'true' and dte_status = 1
                             //and dh_code = :id_doc";
 
-                            dataApproverCAP_Def = context.TravelerApproverConditionModels
+                            dataApproverCAP_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , '3' as approve_status," +
                                 " dte_cap_appr_remark as approve_remark from BZ_DOC_TRAVELER_EXPENSE a where nvl(dte_cap_appr_status,41) = '42' " +
                                 " and dte_cap_appr_opt = 'true' and dte_appr_opt = 'true' and dte_status = 1 and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char"))
@@ -460,7 +457,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //    and (dte_cap_appr_status = 23 and a.dte_cap_appr_opt = 'false')  
                             //    and dh_code = :id_doc";
 
-                            dataApproverCAP2_Def = context.TravelerApproverConditionModels
+                            dataApproverCAP2_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id," +
                                 " '5' as approve_status, dte_cap_appr_remark as approve_remark" +
                                 " from BZ_DOC_TRAVELER_EXPENSE a " +
@@ -485,7 +482,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //or (dte_cap_appr_status is null and dte_appr_status = 32 and dte_appr_opt = 'true'))
                             //and dh_code = :id_doc";
 
-                            dataApproverCAP3_Def = context.TravelerApproverConditionModels
+                            dataApproverCAP3_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id, " +
                                 " '2' as approve_status, dte_cap_appr_remark as approve_remark " +
                                 " from BZ_DOC_TRAVELER_EXPENSE a where dte_status = 1 and (dte_cap_appr_status = 41 " +
@@ -501,7 +498,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //and (dte_appr_status = 23 or dte_cap_appr_status = 23)
                             //and dh_code = :id_doc";
 
-                            dataApproverRevise_Def = context.TravelerApproverConditionModels
+                            dataApproverRevise_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
                                 " '4' as approve_status, dte_appr_remark as approve_remark from BZ_DOC_TRAVELER_EXPENSE a " +
                                 " where dte_status = 1 and (dte_appr_status = 23 or dte_cap_appr_status = 23) " +
@@ -648,7 +645,7 @@ namespace top.ebiz.service.Service.Create_trip
                     }
 
 
-                    docHead = context.DocHeadModels.FromSqlRaw(@"select h.DH_TYPE, h.DH_BEHALF_EMP_ID, h.DH_COM_CODE, h.DH_TOPIC, h.DH_CITY, 
+                    docHead = context.DocHeadModelList.FromSqlRaw(@"select h.DH_TYPE, h.DH_BEHALF_EMP_ID, h.DH_COM_CODE, h.DH_TOPIC, h.DH_CITY, 
                h.DH_TRAVEL_OBJECT, h.DH_REMARK, h.DH_TRAVEL, 
                case when h.DH_BUS_FROMDATE is null then '' else to_char(h.DH_BUS_FROMDATE, 'YYYY-MM-DD') end bus_start, 
                case when h.DH_BUS_TODATE is null then '' else to_char(h.DH_BUS_TODATE, 'YYYY-MM-DD') end bus_stop, 
@@ -731,7 +728,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                         data.action.type = "1";
 
-                        sql = "select * from BZ_DOC_TRAVEL_TYPE where DH_CODE = '" + value.id_doc + "' ";
+                        //sql = "select * from BZ_DOC_TRAVEL_TYPE where DH_CODE = '" + value.id_doc + "' ";
                         travelType = context.BZ_DOC_TRAVEL_TYPE.FromSqlRaw("select * from BZ_DOC_TRAVEL_TYPE where DH_CODE = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                         data.type_of_travel.meeting = "false";
                         data.type_of_travel.siteVisite = "false";
@@ -771,7 +768,7 @@ namespace top.ebiz.service.Service.Create_trip
                         //sql = "select a.CTN_ID, b.CTN_NAME ";
                         //sql += " from BZ_DOC_CONTIENT a left join BZ_MASTER_CONTINENT b on a.CTN_ID=b.CTN_ID ";
                         //sql += " where DH_CODE = '" + value.id_doc + "' ";
-                        continent = context.ContinentDocModels.FromSqlRaw("select a.CTN_ID, b.CTN_NAME " +
+                        continent = context.ContinentDocModelList.FromSqlRaw("select a.CTN_ID, b.CTN_NAME " +
                             " from BZ_DOC_CONTIENT a left join BZ_MASTER_CONTINENT b on a.CTN_ID=b.CTN_ID   " +
                             " where DH_CODE = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                         if (continent != null)
@@ -790,7 +787,7 @@ namespace top.ebiz.service.Service.Create_trip
                         //sql += " from BZ_DOC_COUNTRY a left join BZ_MASTER_COUNTRY b on a.CT_ID=b.CT_ID ";
                         //sql += " left join BZ_MASTER_CONTINENT c on b.CTN_ID=c.CTN_ID ";
                         //sql += " where DH_CODE = '" + value.id_doc + "' ";
-                        country = context.CountryDocModels.FromSqlRaw("select to_char(a.CT_ID) contry_id, b.CT_NAME country_name, to_char(b.CTN_ID) continent_id, c.CTN_NAME continent_name " +
+                        country = context.CountryDocModelList.FromSqlRaw("select to_char(a.CT_ID) contry_id, b.CT_NAME country_name, to_char(b.CTN_ID) continent_id, c.CTN_NAME continent_name " +
                             " from BZ_DOC_COUNTRY a left join BZ_MASTER_COUNTRY b on a.CT_ID=b.CT_ID  left join BZ_MASTER_CONTINENT c on b.CTN_ID=c.CTN_ID " +
                             " where DH_CODE = :id_doc ", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                         if (country != null)
@@ -812,7 +809,7 @@ namespace top.ebiz.service.Service.Create_trip
                         //sql = "select to_char(b.PV_ID) province_id, b.PV_NAME province_name ";
                         //sql += " from BZ_DOC_PROVINCE a left join BZ_MASTER_PROVINCE b on a.PV_ID=b.PV_ID ";
                         //sql += " where DH_CODE = '" + value.id_doc + "' ";
-                        province = context.ProvinceDocModels.FromSqlRaw("select to_char(b.PV_ID) province_id, b.PV_NAME province_name " +
+                        province = context.ProvinceDocModelList.FromSqlRaw("select to_char(b.PV_ID) province_id, b.PV_NAME province_name " +
                             " from BZ_DOC_PROVINCE a left join BZ_MASTER_PROVINCE b on a.PV_ID=b.PV_ID  " +
                             "where DH_CODE = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                         if (province != null)
@@ -916,7 +913,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                             // sql = @"select distinct to_char(pmdv_admin) as type 
                             //         //from bz_data_manage where pmdv_admin = 'true' and emp_id = '" + user_id + "' ";
-                            var pmdv_admin_list = context.ApproverModels.FromSqlRaw(" select distinct to_char(pmdv_admin) as type from bz_data_manage " +
+                            var pmdv_admin_list = context.ApproverModelList.FromSqlRaw(" select distinct to_char(pmdv_admin) as type from bz_data_manage " +
                                 " where pmdv_admin = 'true' and emp_id = : user_id", context.ConvertTypeParameter("user_id", user_id, "char")).ToList();
                             if (pmdv_admin_list != null)
                             {
@@ -958,8 +955,8 @@ namespace top.ebiz.service.Service.Create_trip
             var data = new DocDetail2Model();
             var docHead = new List<DocList2Model>();
 
-            var traveler = new List<TravelerDoc2Model>();
-            var employee = new List<EmployeeDoc2Model>();
+            var traveler = new List<travelerDoc2Model>();
+            var employee = new List<employeeDoc2Model>();
             var approver = new List<approverModel>();
             var travelerapprover = new List<approvertraveler>();
 
@@ -981,14 +978,14 @@ namespace top.ebiz.service.Service.Create_trip
             var TypeModel = new List<TypeModel>();
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
                     //var docHeadStatus = new List<DocHeadModel>();
                     //sql = " select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = '" + value.id_doc + "' ";
                     //docHeadStatus = context.Database.SqlQuery<DocHeadModel>(sql).ToList();
 
                     var id_doc = value.id_doc;
-                    var docHeadStatus = context.DocHeadModels
+                    var docHeadStatus = context.DocHeadModelList
                         .FromSqlRaw("select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = :id_doc"
                        , context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
@@ -1015,7 +1012,7 @@ namespace top.ebiz.service.Service.Create_trip
                     //sql += "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid ";
                     //sql += " WHERE a.TOKEN_CODE ='" + value.token_login + "' ";
                     //login_empid = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    var login_empid = context.SearchUserModels.FromSqlRaw("SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role " +
+                    var login_empid = context.SearchUserModelList.FromSqlRaw("SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role " +
                         "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid " +
                         "WHERE a.TOKEN_CODE = :token_login", context.ConvertTypeParameter("token_login", token_login, "char")).ToList();
                     //var login_emp = context.SearchUserModel.FromSqlRaw()
@@ -1039,7 +1036,7 @@ namespace top.ebiz.service.Service.Create_trip
                         sql += "AND b.emp_id = :user_id ";
                     }
                     /*** {0} == value.id_doc and {1} == user_id ***/
-                    var action = context.SearchUserModels.FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"), context.ConvertTypeParameter("user_id", user_id, "char")).ToList();
+                    var action = context.SearchUserModelList.FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"), context.ConvertTypeParameter("user_id", user_id, "char")).ToList();
 
 
                     //หาว่า  type นี้เป็น oversea หรือ local
@@ -1050,7 +1047,7 @@ namespace top.ebiz.service.Service.Create_trip
                     //sql += " WHERE DH_CODE = '" + value.id_doc + "' " + Environment.NewLine;
                     //docHead = context.Database.SqlQuery<DocList2Model>(sql).ToList();
 
-                    docHead = context.DocList2Models.FromSqlRaw("SELECT DH_CODE,DH_TYPE AS type,DH_EXPENSE_OPT1 AS checkbox_1,DH_EXPENSE_OPT2 AS checkbox_2,DH_EXPENSE_REMARK AS remark," +
+                    docHead = context.DocList2ModelList.FromSqlRaw("SELECT DH_CODE,DH_TYPE AS type,DH_EXPENSE_OPT1 AS checkbox_1,DH_EXPENSE_OPT2 AS checkbox_2,DH_EXPENSE_REMARK AS remark," +
                         " TO_CHAR(DH_DOC_STATUS) AS doc_status, b.TS_NAME AS document_status, a.DH_TYPE_FLOW FROM BZ_DOC_HEAD a " +
                         "LEFT JOIN BZ_MASTER_STATUS b ON a.DH_DOC_STATUS = b.TS_ID WHERE DH_CODE = :id_doc",
                         context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
@@ -1146,7 +1143,7 @@ namespace top.ebiz.service.Service.Create_trip
                     //sql += " order by DTE_ID ";
 
                     //if (data.type == "oversea" || data.type == "overseatraining")
-                    //    data.oversea.employee = context.EmployeeDoc2Models.FromSqlRaw(sql).ToList
+                    //    data.oversea.employee = context.EmployeeDoc2ModelList.FromSqlRaw(sql).ToList
                     //    data.oversea.employee = context.Database.SqlQuery<employeeDoc2>(sql).ToList();
                     //else
                     //    data.local.employee = context.Database.SqlQuery<employeeDoc2>(sql).ToList();
@@ -1166,70 +1163,70 @@ namespace top.ebiz.service.Service.Create_trip
                     // ตรวจสอบว่าเป็น "oversea" หรือ "local"
                     if (data.type == "oversea" || data.type == "overseatraining")
                     {
-                        data.oversea.employee = context.EmployeeDoc2Models.FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
+                        data.oversea.employee = context.EmployeeDoc2ModelList.FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                     }
                     else
                     {
-                        data.local.employee = context.EmployeeDoc2Models.FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
+                        data.local.employee = context.EmployeeDoc2ModelList.FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                     }
 
 
                     //traveler
-                    // sql = " SELECT DTE_EMP_ID emp_id, DTE_AIR_TECKET air_ticket, DTE_ACCOMMODATIC accommodation , to_char(DTE_ALLOWANCE_DAY) allowance_day ";
-                    // sql += " , to_char(DTE_ALLOWANCE_NIGHT) allowance_night, to_char(DTE_CL_VALID, 'dd MON rrrr') clothing_valid ,DTE_CL_EXPENSE clothing_expense ";
-                    // sql += "  , to_char(DTE_PASSPORT_VALID,'dd MON rrrr') passport_valid ,  DTE_PASSPORT_EXPENSE passport_expense, DTE_VISA_FREE visa_fee ";
-                    // sql += "  , DTE_TRAVEL_INS travel_insurance, DTE_TRANSPORT transportation , DTE_REGIS_FREE registration_fee, DTE_MISCELLANEOUS miscellaneous ";
-                    // sql += "  , to_char(DTE_TOTAL_EXPENSE) total_expenses ";
-                    // sql += "  , nvl(U.ENTITLE, '') || ' ' || U.ENFIRSTNAME || ' ' || U.ENLASTNAME || case when h.DH_TRAVEL ='1' then '' else ' | ' || case when h.DH_TYPE like 'local%' then p.pv_name else c.ct_name end end emp_name ";
-                    // sql += "  , u.ORGNAME org, to_char(c.ct_id)country_id, c.ct_name country ";
-                    // sql += "  , case when t.DTE_BUS_FROMDATE is null then '' else to_char(t.DTE_BUS_FROMDATE, 'dd Mon rrrr') || ' - ' || to_char(t.DTE_BUS_TODATE, 'dd Mon rrrr') end as business_date ";
-                    // sql += "  , case when t.DTE_TRAVEL_FROMDATE is null then '' else to_char(t.DTE_TRAVEL_FROMDATE, 'dd Mon rrrr') || ' - ' || to_char(t.DTE_TRAVEL_TODATE, 'dd Mon rrrr') end as travel_date ";
-                    // sql += "  , t.DTE_ALLOWANCE Allowance ";
-                    // sql += " , p.pv_name || (case when nvl(t.city_text,'') = '' then '' else '/'||t.city_text end) province ";
-                    // sql += " , DTE_TOKEN ref_id, 'true' edit, 'true' \"delete\" ";
+                    //sql = " SELECT DTE_EMP_ID emp_id, DTE_AIR_TECKET air_ticket, DTE_ACCOMMODATIC accommodation , to_char(DTE_ALLOWANCE_DAY) allowance_day ";
+                    //sql += " , to_char(DTE_ALLOWANCE_NIGHT) allowance_night, to_char(DTE_CL_VALID, 'dd MON rrrr') clothing_valid ,DTE_CL_EXPENSE clothing_expense ";
+                    //sql += "  , to_char(DTE_PASSPORT_VALID,'dd MON rrrr') passport_valid ,  DTE_PASSPORT_EXPENSE passport_expense, DTE_VISA_FREE visa_fee ";
+                    //sql += "  , DTE_TRAVEL_INS travel_insurance, DTE_TRANSPORT transportation , DTE_REGIS_FREE registration_fee, DTE_MISCELLANEOUS miscellaneous ";
+                    //sql += "  , to_char(DTE_TOTAL_EXPENSE) total_expenses ";
+                    //sql += "  , nvl(U.ENTITLE, '') || ' ' || U.ENFIRSTNAME || ' ' || U.ENLASTNAME || case when h.DH_TRAVEL ='1' then '' else ' | ' || case when h.DH_TYPE like 'local%' then p.pv_name else c.ct_name end end emp_name ";
+                    //sql += "  , u.ORGNAME org, to_char(c.ct_id)country_id, c.ct_name country ";
+                    //sql += "  , case when t.DTE_BUS_FROMDATE is null then '' else to_char(t.DTE_BUS_FROMDATE, 'dd Mon rrrr') || ' - ' || to_char(t.DTE_BUS_TODATE, 'dd Mon rrrr') end as business_date ";
+                    //sql += "  , case when t.DTE_TRAVEL_FROMDATE is null then '' else to_char(t.DTE_TRAVEL_FROMDATE, 'dd Mon rrrr') || ' - ' || to_char(t.DTE_TRAVEL_TODATE, 'dd Mon rrrr') end as travel_date ";
+                    //sql += "  , t.DTE_ALLOWANCE Allowance ";
+                    //sql += " , p.pv_name || (case when nvl(t.city_text,'') = '' then '' else '/'||t.city_text end) province ";
+                    //sql += " , DTE_TOKEN ref_id, 'true' edit, 'true' \"delete\" ";
 
-                    // sql += " , t.dte_traveler_remark remark ";
+                    //sql += " , t.dte_traveler_remark remark ";
 
-                    // //DevFix 20210714 0000 เพิ่มสถานะที่ Line/CAP --> 1:Draft , 2:Pendding , 3:Approve , 4:Revise , 5:Reject 
-                    // sql += " , '' as approve_status";
-                    // sql += " , '' as approve_remark";
+                    ////DevFix 20210714 0000 เพิ่มสถานะที่ Line/CAP --> 1:Draft , 2:Pendding , 3:Approve , 4:Revise , 5:Reject 
+                    //sql += " , '' as approve_status";
+                    //sql += " , '' as approve_remark";
 
-                    // //DevFix 20210719 0000 เพิ่ม field OPT
-                    // sql += " , t.dte_appr_remark as approve_opt";
-                    // //DevFix 20210719 0000 เพิ่ม field OPT
-                    // //sql += " , t.dte_appr_remark as remark_opt"; 
-                    // if (docHead[0].doc_status.ToString().Substring(0, 1) == "4" ||
-                    //     docHead[0].doc_status.ToString().Substring(0, 1) == "5")
-                    // {
-                    //     if (docHead[0].doc_status.ToString() == "41")
-                    //     {
-                    //         sql += " , t.dte_appr_remark as remark_opt";
-                    //     }
-                    //     else
-                    //     {
-                    //         sql += " , case when t.dte_appr_opt = 'false' then t.dte_appr_remark else t.dte_cap_appr_remark end remark_opt";
-                    //     }
-                    // }
-                    // else
-                    // {
-                    //     sql += " , t.dte_appr_remark as remark_opt";
-                    // }
+                    ////DevFix 20210719 0000 เพิ่ม field OPT
+                    //sql += " , t.dte_appr_remark as approve_opt";
+                    ////DevFix 20210719 0000 เพิ่ม field OPT
+                    ////sql += " , t.dte_appr_remark as remark_opt"; 
+                    //if (docHead[0].doc_status.ToString().Substring(0, 1) == "4" ||
+                    //    docHead[0].doc_status.ToString().Substring(0, 1) == "5")
+                    //{
+                    //    if (docHead[0].doc_status.ToString() == "41")
+                    //    {
+                    //        sql += " , t.dte_appr_remark as remark_opt";
+                    //    }
+                    //    else
+                    //    {
+                    //        sql += " , case when t.dte_appr_opt = 'false' then t.dte_appr_remark else t.dte_cap_appr_remark end remark_opt";
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    sql += " , t.dte_appr_remark as remark_opt";
+                    //}
 
-                    // sql += " , t.dte_cap_appr_remark as remark_cap";
+                    //sql += " , t.dte_cap_appr_remark as remark_cap";
 
-                    // //DevFix 20210817 เพิ่ม key traveler_ref_id เพื่อใช้ในการแยกข้อมูลออกแต่ละรายการ เนื่องจากเงื่อนไขเดิมข้อมูลซ้ำ --> เก็บค่าเป็น token id
-                    // //เนื่องจากไม่สามารถ up dataset model ได้ให้ใช้ DTE_TOKEN แทน
-                    // sql += " , to_char(DTE_TOKEN) as traveler_ref_id";
+                    ////DevFix 20210817 เพิ่ม key traveler_ref_id เพื่อใช้ในการแยกข้อมูลออกแต่ละรายการ เนื่องจากเงื่อนไขเดิมข้อมูลซ้ำ --> เก็บค่าเป็น token id
+                    ////เนื่องจากไม่สามารถ up dataset model ได้ให้ใช้ DTE_TOKEN แทน
+                    //sql += " , to_char(DTE_TOKEN) as traveler_ref_id";
 
-                    // sql += " from BZ_DOC_TRAVELER_EXPENSE t left join bz_users u on t.dte_emp_id = u.employeeid ";
-                    // sql += " inner join bz_doc_head h on t.dh_code=h.dh_code ";
-                    // sql += " left join bz_master_country c on t.CT_ID = c.ct_id ";
-                    // sql += " left join BZ_MASTER_PROVINCE p on t.PV_ID = p.PV_ID ";
-                    // sql += " WHERE t.DH_CODE = '" + value.id_doc + "' and t.dte_status = 1  and  t.DTE_EXPENSE_CONFIRM = 1  ";
-                    // sql += " order by DTE_ID ";
-                    // var travelTemp = context.Database.SqlQuery<TravelerDoc2Model>(sql).ToList();
+                    //sql += " from BZ_DOC_TRAVELER_EXPENSE t left join bz_users u on t.dte_emp_id = u.employeeid ";
+                    //sql += " inner join bz_doc_head h on t.dh_code=h.dh_code ";
+                    //sql += " left join bz_master_country c on t.CT_ID = c.ct_id ";
+                    //sql += " left join BZ_MASTER_PROVINCE p on t.PV_ID = p.PV_ID ";
+                    //sql += " WHERE t.DH_CODE = '" + value.id_doc + "' and t.dte_status = 1  and  t.DTE_EXPENSE_CONFIRM = 1  ";
+                    //sql += " order by DTE_ID ";
+                    //// var travelTemp = context.Database.SqlQuery<TravelerDoc2Model>(sql).ToList();
 
-                    var travelTemp = context.TravelerDoc2Models.FromSqlRaw("SELECT DTE_EMP_ID AS emp_id, DTE_AIR_TECKET AS air_ticket, DTE_ACCOMMODATIC AS accommodation, TO_CHAR(DTE_ALLOWANCE_DAY) AS allowance_day, " +
+                    var travelTemp = context.TravelerDoc2ModelList.FromSqlRaw("SELECT DTE_EMP_ID AS emp_id, DTE_AIR_TECKET AS air_ticket, DTE_ACCOMMODATIC AS accommodation, TO_CHAR(DTE_ALLOWANCE_DAY) AS allowance_day, " +
                         " TO_CHAR(DTE_ALLOWANCE_NIGHT) AS allowance_night, TO_CHAR(DTE_CL_VALID, 'dd MON rrrr') AS clothing_valid, DTE_CL_EXPENSE AS clothing_expense, TO_CHAR(DTE_PASSPORT_VALID, 'dd MON rrrr') AS passport_valid, " +
                         " DTE_PASSPORT_EXPENSE AS passport_expense, DTE_VISA_FREE AS visa_fee, DTE_TRAVEL_INS AS travel_insurance, DTE_TRANSPORT AS transportation, DTE_REGIS_FREE AS registration_fee, DTE_MISCELLANEOUS AS miscellaneous, " +
                         " TO_CHAR(DTE_TOTAL_EXPENSE) AS total_expenses, NVL(U.ENTITLE, '') || ' ' || U.ENFIRSTNAME || ' ' || U.ENLASTNAME || CASE WHEN h.DH_TRAVEL ='1' THEN '' ELSE ' | ' || CASE WHEN h.DH_TYPE LIKE 'local%' THEN p.pv_name ELSE c.ct_name END END AS emp_name, U.ORGNAME AS org, " +
@@ -1241,15 +1238,16 @@ namespace top.ebiz.service.Service.Create_trip
                         " INNER JOIN bz_doc_head h ON t.dh_code = h.dh_code " +
                         " LEFT JOIN  bz_master_country c ON t.CT_ID = c.ct_id " +
                         " LEFT JOIN BZ_MASTER_PROVINCE p ON t.PV_ID = p.PV_ID " +
-                        " WHERE t.DH_CODE = :id_doc AND t.dte_status = 1  AND t.DTE_EXPENSE_CONFIRM = 1 ORDER BY DTE_ID", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
+                        " WHERE t.DH_CODE = :id_doc AND t.dte_status = 1  AND t.DTE_EXPENSE_CONFIRM = 1 ORDER BY DTE_ID"
+                        , context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
                     #region DevFix 20210714 0000 ดึงข้อมูลรายละเอียด approver เดิม
                     var bCheckPF_CAP = true;//กรณีที่ Line submit to CAP แต่ CAP ยังไม่ได้ active
-                    sql = @" select to_char(count(1)) as approve_status
-                                from BZ_DOC_TRAVELER_APPROVER a
-                                where dta_action_status >  2 and a.dta_type = 2 and dh_code =  '" + value.id_doc + "'  ";
+                    //sql = @" select to_char(count(1)) as approve_status
+                    //            from BZ_DOC_TRAVELER_APPROVER a
+                    //            where dta_action_status >  2 and a.dta_type = 2 and dh_code =  '" + value.id_doc + "'  ";
                     // var dataCheck_Def = context.Database.SqlQuery<TravelerApproverConditionModel>(sql).ToList();
-                    var dataCheck_Def = context.TravelerApproverConditionModels.FromSqlRaw("select to_char(count(1)) as approve_status from BZ_DOC_TRAVELER_APPROVER a where dta_action_status >  2 and a.dta_type = 2 and dh_code = :id_doc ",
+                    var dataCheck_Def = context.TravelerApproverConditionModelList.FromSqlRaw("select to_char(count(1)) as approve_status from BZ_DOC_TRAVELER_APPROVER a where dta_action_status >  2 and a.dta_type = 2 and dh_code = :id_doc ",
                         context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                     if (dataCheck_Def != null)
                     {
@@ -1303,33 +1301,33 @@ namespace top.ebiz.service.Service.Create_trip
 
                     sql += " ORDER BY dta_appr_level";
 
-                    var dataApprover_Def = context.TravelerApproverConditionModels
+                    var dataApprover_Def = context.TravelerApproverConditionModelList
                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                         .ToList();
-                    var dataApproverLine_Def = context.TravelerApproverConditionModels
+                    var dataApproverLine_Def = context.TravelerApproverConditionModelList
                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                         .ToList();
-                    var dataApproverLine2_Def = context.TravelerApproverConditionModels
-                        .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
-                        .ToList();
-
-                    var dataApproverLine3_Def = context.TravelerApproverConditionModels
+                    var dataApproverLine2_Def = context.TravelerApproverConditionModelList
                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                         .ToList();
 
-                    var dataApproverCAP_Def = context.TravelerApproverConditionModels
+                    var dataApproverLine3_Def = context.TravelerApproverConditionModelList
                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                         .ToList();
 
-                    var dataApproverCAP2_Def = context.TravelerApproverConditionModels
+                    var dataApproverCAP_Def = context.TravelerApproverConditionModelList
                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                         .ToList();
 
-                    var dataApproverCAP3_Def = context.TravelerApproverConditionModels
+                    var dataApproverCAP2_Def = context.TravelerApproverConditionModelList
                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                         .ToList();
 
-                    var dataApproverRevise_Def = context.TravelerApproverConditionModels
+                    var dataApproverCAP3_Def = context.TravelerApproverConditionModelList
+                        .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
+                        .ToList();
+
+                    var dataApproverRevise_Def = context.TravelerApproverConditionModelList
                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                         .ToList();
 
@@ -1341,13 +1339,13 @@ namespace top.ebiz.service.Service.Create_trip
 
                         //line approve
 
-                        dataApproverLine_Def = context.TravelerApproverConditionModels.FromSqlRaw("select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
+                        dataApproverLine_Def = context.TravelerApproverConditionModelList.FromSqlRaw("select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
                             " '3' as approve_status, dte_appr_remark as approve_remark from BZ_DOC_TRAVELER_EXPENSE a where dte_appr_opt = 'true' and dte_status = 1 and dte_appr_status <> 23  and dh_code = :id_doc",
                             context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
                         //line reject
 
-                        dataApproverLine2_Def = context.TravelerApproverConditionModels.FromSqlRaw(" SELECT TO_CHAR(dte_token) AS traveler_ref_id, dte_emp_id AS emp_id, " +
+                        dataApproverLine2_Def = context.TravelerApproverConditionModelList.FromSqlRaw(" SELECT TO_CHAR(dte_token) AS traveler_ref_id, dte_emp_id AS emp_id, " +
                             " '5' AS approve_status, dte_appr_remark AS approve_remark FROM BZ_DOC_TRAVELER_EXPENSE a " +
                             " WHERE ((dte_appr_opt = 'false' AND dte_status = 1) OR dte_appr_status = 30) AND dh_code = :id_doc" +
                             " UNION SELECT TO_CHAR(dte_token) AS traveler_ref_id, dte_emp_id AS emp_id, '5' AS approve_status, " +
@@ -1356,20 +1354,20 @@ namespace top.ebiz.service.Service.Create_trip
                             context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                         //line pendding
 
-                        dataApproverLine3_Def = context.TravelerApproverConditionModels.FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id, '2' as approve_status, dte_appr_remark as approve_remark" +
+                        dataApproverLine3_Def = context.TravelerApproverConditionModelList.FromSqlRaw(" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id, '2' as approve_status, dte_appr_remark as approve_remark" +
                             " from BZ_DOC_TRAVELER_EXPENSE a where dte_status = 1 and dte_appr_status = 31 " +
                             " and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
                         //cap approve
 
-                        dataApproverCAP_Def = context.TravelerApproverConditionModels.FromSqlRaw("select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id, '3' as approve_status, dte_cap_appr_remark as approve_remark " +
+                        dataApproverCAP_Def = context.TravelerApproverConditionModelList.FromSqlRaw("select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id, '3' as approve_status, dte_cap_appr_remark as approve_remark " +
                             " from BZ_DOC_TRAVELER_EXPENSE a where nvl(dte_cap_appr_status,41) = '42' " +
                             "and (dte_cap_appr_opt = 'true' and dte_appr_opt = 'true') and dte_status = 1 " +
                             "and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
                         //cap reject
 
-                        dataApproverCAP2_Def = context.TravelerApproverConditionModels.FromSqlRaw(" SELECT TO_CHAR(dte_token) AS traveler_ref_id, dte_emp_id AS emp_id, " +
+                        dataApproverCAP2_Def = context.TravelerApproverConditionModelList.FromSqlRaw(" SELECT TO_CHAR(dte_token) AS traveler_ref_id, dte_emp_id AS emp_id, " +
                             " '5' AS approve_status, dte_cap_appr_remark AS approve_remark FROM  BZ_DOC_TRAVELER_EXPENSE a " +
                             " WHERE NVL(dte_cap_appr_status, 41) = '42' AND((dte_cap_appr_opt = 'false' AND dte_status = 1) " +
                             " OR(dte_appr_opt = 'false' AND dte_appr_status = 32) OR dte_cap_appr_status = 40) AND dh_code = :id_doc " +
@@ -1380,7 +1378,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                         //cap pendding
 
-                        dataApproverCAP3_Def = context.TravelerApproverConditionModels.FromSqlRaw("select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id, " +
+                        dataApproverCAP3_Def = context.TravelerApproverConditionModelList.FromSqlRaw("select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id, " +
                             " '2' as approve_status, dte_cap_appr_remark as approve_remark from BZ_DOC_TRAVELER_EXPENSE a where dte_status = 1 and (dte_cap_appr_status = 41 " +
                             " or (dte_cap_appr_status is null and  dte_appr_status = 32 and dte_appr_opt = 'true' ) ) and dh_code = :id_doc ",
                             context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
@@ -1389,7 +1387,7 @@ namespace top.ebiz.service.Service.Create_trip
                         //line/CAP revise
 
 
-                        dataApproverRevise_Def = context.TravelerApproverConditionModels.FromSqlRaw("select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
+                        dataApproverRevise_Def = context.TravelerApproverConditionModelList.FromSqlRaw("select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id , " +
                             " '4' as approve_status, dte_appr_remark as approve_remark from BZ_DOC_TRAVELER_EXPENSE a where dte_status = 1 and (dte_appr_status = 23 " +
                             " or dte_cap_appr_status = 23) and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
@@ -1503,8 +1501,7 @@ namespace top.ebiz.service.Service.Create_trip
                     else
                         data.local.traveler = travelTemp;
 
-
-                    var travelTempApprover = context.Doc2ApproverModels.FromSqlRaw(@"select to_char(a.dta_id) as line_id, 
+                    var travelTempApprover = context.Doc2ApproverModelList.FromSqlRaw(@"select to_char(a.dta_id) as line_id, 
                       to_char(a.dta_type) as type, 
                       a.dta_travel_empid as emp_id, 
                       nvl(u.ENTITLE, '') || ' ' || u.ENFIRSTNAME || ' ' || u.ENLASTNAME as emp_name, 
@@ -1570,7 +1567,7 @@ namespace top.ebiz.service.Service.Create_trip
                             sql = "test log 4";//test log
                             // sql = @"select distinct to_char(pmdv_admin) as type 
                             //         from bz_data_manage where pmdv_admin = 'true' and emp_id = '" + user_id + "' ";
-                            var pmdv_admin_list = context.ApproverModels.FromSqlRaw(" select distinct to_char(pmdv_admin) as type from bz_data_manage " +
+                            var pmdv_admin_list = context.ApproverModelList.FromSqlRaw(" select distinct to_char(pmdv_admin) as type from bz_data_manage " +
                                 " where pmdv_admin = 'true' and emp_id = : user_id", context.ConvertTypeParameter("user_id", user_id, "char")).ToList();
 
                             sql = "test log 5";//test log
@@ -1636,7 +1633,7 @@ namespace top.ebiz.service.Service.Create_trip
 
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
                     decimal grand_total = 0;
                     var person_user = 0;
@@ -1648,7 +1645,7 @@ namespace top.ebiz.service.Service.Create_trip
                     #region ตรวจสอบสถานะใบงาน
                     var docHeadStatus = new List<DocHeadModel>();
                     // sql = " select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = '" + value.id_doc + "' ";
-                    docHeadStatus = context.DocHeadModels.FromSqlRaw("select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
+                    docHeadStatus = context.DocHeadModelList.FromSqlRaw("select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
                     if (docHeadStatus != null && docHeadStatus.Count > 0)
                     {
                         document_status = docHeadStatus[0].document_status;
@@ -1666,7 +1663,7 @@ namespace top.ebiz.service.Service.Create_trip
                     // sql += "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid ";
                     // sql += " WHERE a.TOKEN_CODE ='" + value.token + "' ";
                     // login_empid = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    login_empid = context.SearchUserModels
+                    login_empid = context.SearchUserModelList
     .FromSqlRaw(@"
     SELECT  
         a.USER_NAME, 
@@ -1690,7 +1687,7 @@ namespace top.ebiz.service.Service.Create_trip
                     {
                         //sql = @" select emp_id as user_id from bz_data_manage where (pmsv_admin = 'true' or pmdv_admin = 'true') and emp_id = '" + user_id + "' ";
                         //var adminlist = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                        var adminlist = context.SearchUserModels.FromSqlRaw("select emp_id as user_id from bz_data_manage where (pmsv_admin = 'true' or pmdv_admin = 'true') and emp_id = :user_id", context.ConvertTypeParameter("id_doc", user_id, "char")).ToList();
+                        var adminlist = context.SearchUserModelList.FromSqlRaw("select emp_id as user_id from bz_data_manage where (pmsv_admin = 'true' or pmdv_admin = 'true') and emp_id = :user_id", context.ConvertTypeParameter("id_doc", user_id, "char")).ToList();
                         if (adminlist != null)
                         {
                             if (adminlist.Count > 0) { user_role = "1"; }
@@ -1733,7 +1730,7 @@ namespace top.ebiz.service.Service.Create_trip
     AND action_status = 1 
     AND b.tab_no = 3";
 
-                    var action = context.SearchUserModels
+                    var action = context.SearchUserModelList
                         .FromSqlRaw(sql,
                             context.ConvertTypeParameter(":id_doc", id_doc),
                             context.ConvertTypeParameter(":user_id", user_id))
@@ -1768,7 +1765,7 @@ namespace top.ebiz.service.Service.Create_trip
                         //        )t  where t.user_type in (1,2,4) and t.doc_id ='" + value.id_doc + "' and t.emp_id = '" + user_id + "' ";
                         //sql += " order by user_type desc ";
                         //emp_type = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                        emp_type = context.SearchUserModels.FromSqlRaw("SELECT TO_CHAR(t.user_type) AS user_type FROM (" +
+                        emp_type = context.SearchUserModelList.FromSqlRaw("SELECT TO_CHAR(t.user_type) AS user_type FROM (" +
                             "SELECT dh_code AS doc_id, 1 AS user_type, a.dta_travel_empid AS emp_id FROM bz_doc_traveler_approver a WHERE a.dta_type = 1 " +
                             "UNION SELECT dh_code AS doc_id, 2 AS user_type, a.dta_appr_empid AS emp_id FROM bz_doc_traveler_approver a WHERE a.dta_type = 1 " +
                             "UNION SELECT dh_code AS doc_id, 3 AS user_type, a.dta_appr_empid AS emp_id FROM bz_doc_traveler_approver a WHERE a.dta_type = 2 " +
@@ -1798,7 +1795,7 @@ namespace top.ebiz.service.Service.Create_trip
                     }
 
                     // Execute SQL using FromSqlRaw
-                    var actionapprover_type = context.ApproverModels
+                    var actionapprover_type = context.ApproverModelList
                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"), context.ConvertTypeParameter("user_id", user_id, "char"))
                         .ToList();
 
@@ -1830,7 +1827,7 @@ namespace top.ebiz.service.Service.Create_trip
                     // sql += " left join BZ_MASTER_CONTINENT e on d.ctn_id=e.ctn_id ";
                     // sql += " WHERE a.DH_CODE = '" + value.id_doc + "' " + Environment.NewLine;
                     // sql += " order by e.ctn_name ";
-                    docHead = context.DocList3Models
+                    docHead = context.DocList3ModelList
     .FromSqlRaw(@"
     SELECT 
         a.DH_CODE, 
@@ -2047,7 +2044,7 @@ namespace top.ebiz.service.Service.Create_trip
                         sql = sql_select + sql_from + " ORDER BY ex.dte_id";
 
                         // Execute the query with named parameters
-                        var docDetail3Head = context.DocDetail3HeadModels
+                        var docDetail3Head = context.DocDetail3HeadModelList
                             .FromSqlRaw(sql,
                                 context.ConvertTypeParameter("id_doc", id_doc, "char"),
                                 context.ConvertTypeParameter("user_id", user_id, "char"))
@@ -2114,7 +2111,7 @@ namespace top.ebiz.service.Service.Create_trip
     ORDER BY ex.dte_id";
 
                         // Execute the query with named parameters
-                        var travelDetails = context.DocDetail3HeadModels
+                        var travelDetails = context.DocDetail3HeadModelList
                             .FromSqlRaw(sql,
                                 context.ConvertTypeParameter("user_id", user_id, "char"),
                                 context.ConvertTypeParameter("id_doc", id_doc, "char"))
@@ -2187,13 +2184,13 @@ namespace top.ebiz.service.Service.Create_trip
                         }
 
                         // Execute SQL queries
-                        var docDetailProvince = context.DocDetail3HeadModels
+                        var docDetailProvince = context.DocDetail3HeadModelList
                             .FromSqlRaw(sql_p).ToList();
 
-                        var docDetailCity = context.DocDetail3HeadModels
+                        var docDetailCity = context.DocDetail3HeadModelList
                             .FromSqlRaw(sql_c).ToList();
 
-                        var docDetailDate = context.DocDetail3HeadModels
+                        var docDetailDate = context.DocDetail3HeadModelList
                             .FromSqlRaw(sql_date, context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
 
                         #endregion รายละเอียด head
@@ -2261,7 +2258,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                         //DevFix 20210721 0000 กรณีที่เป็น CAP ของ Line นั้นๆ ให้แสดงจำนวน Traveler และ Total
                         var bCheckApproverLineInDoc = false;
-                        var bCheckTravelerListInDoc = false;
+                        //var bCheckTravelerListInDoc = false;
                         var no = 0;
                         var no2 = 0;
 
@@ -2313,7 +2310,7 @@ namespace top.ebiz.service.Service.Create_trip
                                                 person_user += 1;
                                             }
                                             //DevFix 20210721 0000 กรณีที่เป็น CAP ของ Line นั้นๆ ให้แสดงจำนวน Traveler และ Total
-                                            bCheckTravelerListInDoc = true;
+                                            //bCheckTravelerListInDoc = true;
 
                                             //decimal total = toDecimal(t.total);
                                             total = toDecimal(t.total);
@@ -2384,7 +2381,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                                 //DevFix 20210721 0000 กรณีที่เป็น CAP ของ Line นั้นๆ ให้แสดงจำนวน Traveler และ Total
                                 bCheckApproverLineInDoc = true;
-                                bCheckTravelerListInDoc = true;
+                                //bCheckTravelerListInDoc = true;
                             }
                         }
                         if (user_role != "1" && login_emp_requester_view == false) // ถ้าไม่ใช่ admin : ดึงของรายการคนอนุมัติคนอื่นมาแสดงด้วย
@@ -2426,7 +2423,7 @@ namespace top.ebiz.service.Service.Create_trip
                             // sql += " and ex.dte_status = 1 ";
                             // sql += " order by ex.dte_id ";
 
-                            var docDetail3Head_2 = context.DocDetail3HeadModels
+                            var docDetail3Head_2 = context.DocDetail3HeadModelList
     .FromSqlRaw(@"
     SELECT ct.ctn_name AS continent,
            cr.ct_name AS country,
@@ -2511,7 +2508,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 // sql = @" select a.dta_travel_empid as emp_id
                                 //                 from bz_doc_traveler_approver  a 
                                 //                 where a.dta_type = 2 and a.dh_code  = '" + value.id_doc + "' and a.dta_appr_empid = '" + user_id + "'";
-                                var apprlist = context.DocDetail3HeadModels
+                                var apprlist = context.DocDetail3HeadModelList
     .FromSqlRaw(@"SELECT a.dta_travel_empid AS emp_id
             FROM bz_doc_traveler_approver a 
             WHERE a.dta_type = 2 
@@ -2679,7 +2676,7 @@ namespace top.ebiz.service.Service.Create_trip
                             // sql = @" select to_char(count(1)) as approve_status
                             //     from BZ_DOC_TRAVELER_APPROVER a
                             //     where dta_action_status >  2 and a.dta_type = 2 and dh_code =  '" + value.id_doc + "'  ";
-                            var dataCheck_Def = context.TravelerApproverConditionModels.FromSqlRaw(
+                            var dataCheck_Def = context.TravelerApproverConditionModelList.FromSqlRaw(
                               @"SELECT to_char(count(1)) AS approve_status
                               FROM BZ_DOC_TRAVELER_APPROVER a
                               WHERE dta_action_status > 2 
@@ -2716,32 +2713,32 @@ namespace top.ebiz.service.Service.Create_trip
                             sql += " ORDER BY dta_appr_level";
 
                             // Execute the approver details query
-                            var dataApprover_Def = context.TravelerApproverConditionModels
+                            var dataApprover_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                 .ToList();
 
                             #region DevFix 20211013 0000 กรณีที่เป็น step cap ให้ตรวจสอบ line ว่ามีการ reject หรือไม่
-                            var dataApproverLine_Def = context.TravelerApproverConditionModels
+                            var dataApproverLine_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                 .ToList();
 
-                            var dataApproverLine2_Def = context.TravelerApproverConditionModels
+                            var dataApproverLine2_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                 .ToList();
 
-                            var dataApproverLine3_Def = context.TravelerApproverConditionModels
+                            var dataApproverLine3_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                 .ToList();
 
-                            var dataApproverCAP_Def = context.TravelerApproverConditionModels
+                            var dataApproverCAP_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                 .ToList();
 
-                            var dataApproverCAP2_Def = context.TravelerApproverConditionModels
+                            var dataApproverCAP2_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                 .ToList();
 
-                            var dataApproverCAP3_Def = context.TravelerApproverConditionModels
+                            var dataApproverCAP3_Def = context.TravelerApproverConditionModelList
                                 .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                 .ToList();
                             if (pf_doc_id == "3" || pf_doc_id == "4" || pf_doc_id == "5")
@@ -2752,7 +2749,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where nvl(dte_appr_status,31) = '32' and dte_appr_opt = 'true' and dte_status = 1 and dte_appr_status <> 23
                                 //          and dh_code = '" + value.id_doc + "' ";
-                                dataApproverLine_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverLine_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '3' as approve_status, dte_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where nvl(dte_appr_status,31) = '32' and dte_appr_opt = 'true' and dte_status = 1 and dte_appr_status <> 23
@@ -2764,7 +2761,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where nvl(dte_appr_status,31) = '32' and ((dte_appr_opt = 'false' and dte_status = 1) or dte_appr_status = 30 )
                                 //          and dh_code = '" + value.id_doc + "' ";
-                                dataApproverLine2_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverLine2_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '5' as approve_status, dte_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where nvl(dte_appr_status,31) = '32' and ((dte_appr_opt = 'false' and dte_status = 1) or dte_appr_status = 30 )
@@ -2775,7 +2772,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          , '2' as approve_status, dte_appr_remark as approve_remark
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where dte_status = 1 and dte_appr_status = 32 and dh_code = '" + value.id_doc + "' ";
-                                dataApproverLine3_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverLine3_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '2' as approve_status, dte_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where dte_status = 1 and dte_appr_status = 32 and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
@@ -2786,7 +2783,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where nvl(dte_cap_appr_status,41) = '42' and (dte_cap_appr_opt = 'true' and dte_appr_opt = 'true') and dte_status = 1
                                 //          and dh_code = '" + value.id_doc + "' ";
-                                dataApproverCAP_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverCAP_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '3' as approve_status, dte_cap_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where nvl(dte_cap_appr_status,41) = '42' and (dte_cap_appr_opt = 'true' and dte_appr_opt = 'true') and dte_status = 1
@@ -2798,7 +2795,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where nvl(dte_cap_appr_status,41) = '42' and ( (dte_cap_appr_opt = 'false' and dte_status = 1) or (dte_appr_opt = 'false' and dte_appr_status = 32) or dte_cap_appr_status = 40 )
                                 //          and dh_code = '" + value.id_doc + "' ";
-                                dataApproverCAP2_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverCAP2_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '5' as approve_status, dte_cap_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where nvl(dte_cap_appr_status,41) = '42' and ( (dte_cap_appr_opt = 'false' and dte_status = 1) or (dte_appr_opt = 'false' and dte_appr_status = 32) or dte_cap_appr_status = 40 )
@@ -2965,7 +2962,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                                 // sql = @"select distinct to_char(pmdv_admin) as type 
                                 //     from bz_data_manage where pmdv_admin = 'true' and emp_id = '" + user_id + "' ";
-                                var pmdv_admin_list = context.ApproverModels.FromSqlRaw(" select distinct to_char(pmdv_admin) as type from bz_data_manage " +
+                                var pmdv_admin_list = context.ApproverModelList.FromSqlRaw(" select distinct to_char(pmdv_admin) as type from bz_data_manage " +
                                 " where pmdv_admin = 'true' and emp_id = : user_id", context.ConvertTypeParameter("user_id", user_id, "char")).ToList();
                                 if (pmdv_admin_list != null)
                                 {
@@ -3031,7 +3028,7 @@ namespace top.ebiz.service.Service.Create_trip
             var TypeModel = new List<TypeModel>();
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
                     sql = "";
                     string document_status = "";
@@ -3048,7 +3045,7 @@ namespace top.ebiz.service.Service.Create_trip
                     //sql += "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid ";
                     //sql += " WHERE a.TOKEN_CODE ='" + value.token + "' ";
                     //login_empid = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    login_empid = context.SearchUserModels.FromSqlRaw("SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role " +
+                    login_empid = context.SearchUserModelList.FromSqlRaw("SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role " +
                         "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid " +
                         "WHERE a.TOKEN_CODE = {0}", token).ToList();
                     if (login_empid != null && login_empid.Count() > 0)
@@ -3062,7 +3059,7 @@ namespace top.ebiz.service.Service.Create_trip
                     var docHeadStatus = new List<DocHeadModel>();
                     sql = " select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = '" + value.id_doc + "' ";
                     //docHeadStatus = context.Database.SqlQuery<DocHeadModel>(sql).ToList();
-                    docHeadStatus = context.DocHeadModels.FromSqlRaw(" select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = {0}", id_doc).ToList();
+                    docHeadStatus = context.DocHeadModelList.FromSqlRaw(" select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = {0}", id_doc).ToList();
                     if (docHeadStatus != null && docHeadStatus.Count > 0)
                     {
                         document_status = docHeadStatus[0].document_status;
@@ -3073,7 +3070,7 @@ namespace top.ebiz.service.Service.Create_trip
                     if (value.id_doc.IndexOf("T") > -1)
                     {
                         // sql = @" select emp_id as user_id from bz_data_manage where (pmsv_admin = 'true' or pmdv_admin = 'true') and emp_id = '" + user_id + "' ";
-                        var adminlist = context.SearchUserModels
+                        var adminlist = context.SearchUserModelList
         .FromSqlRaw(@"SELECT emp_id AS user_id 
                           FROM bz_data_manage 
                           WHERE (pmsv_admin = 'true' OR pmdv_admin = 'true') 
@@ -3117,7 +3114,7 @@ namespace top.ebiz.service.Service.Create_trip
 
 
                     // Execute the action query
-                    var action = context.SearchUserModels
+                    var action = context.SearchUserModelList
                         .FromSqlRaw(sqlAction,
                             context.ConvertTypeParameter("id_doc", id_doc, "char"),
                             context.ConvertTypeParameter("user_id", user_id, "char"))
@@ -3151,7 +3148,7 @@ namespace top.ebiz.service.Service.Create_trip
                         //      from  bz_doc_head a
                         //     )t  where t.user_type in (1,3,4) and t.doc_id ='" + value.id_doc + "' and t.emp_id = '" + user_id + "' ";
                         // sql += " order by user_type desc ";
-                        emp_type = context.SearchUserModels
+                        emp_type = context.SearchUserModelList
     .FromSqlRaw(@"SELECT to_char(t.user_type) AS user_type
             FROM (
                 SELECT dh_code AS doc_id, 1 AS user_type, a.dta_travel_empid AS emp_id
@@ -3212,7 +3209,7 @@ namespace top.ebiz.service.Service.Create_trip
                     // sql += " WHERE a.DH_CODE = '" + value.id_doc + "' " + Environment.NewLine;
                     // sql += " order by e.ctn_name ";
 
-                    docHead = context.DocList3Models
+                    docHead = context.DocList3ModelList
     .FromSqlRaw(sql, @"SELECT a.DH_CODE, 
                    DH_TYPE as type, 
                    DH_EXPENSE_OPT1 as checkbox_1, 
@@ -3403,13 +3400,13 @@ namespace top.ebiz.service.Service.Create_trip
                         }
 
                         // Execute queries using FromSqlRaw and parameters
-                        var docDetail3Head = context.DocDetail3HeadModels
+                        var docDetail3Head = context.DocDetail3HeadModelList
                             .FromSqlRaw(sqlmain,
                                         context.ConvertTypeParameter("id_doc", value.id_doc, "char"),
                                         context.ConvertTypeParameter("user_id", user_id, "char"))
                             .ToList();
 
-                        var docDetail3HeadSummary = context.DocDetail3HeadModels
+                        var docDetail3HeadSummary = context.DocDetail3HeadModelList
                             .FromSqlRaw(sql,
                                         context.ConvertTypeParameter("id_doc", value.id_doc, "char"),
                                         context.ConvertTypeParameter("user_id", user_id, "char"))
@@ -3504,9 +3501,9 @@ namespace top.ebiz.service.Service.Create_trip
                         }
 
                         // Executing queries using FromSqlRaw
-                        var docDetailProvince = context.DocDetail3HeadModels.FromSqlRaw(sql_p).ToList();
-                        var docDetailCity = context.DocDetail3HeadModels.FromSqlRaw(sql_c).ToList();
-                        var docDetailDate = context.DocDetail3HeadModels.FromSqlRaw(sql_date).ToList();
+                        var docDetailProvince = context.DocDetail3HeadModelList.FromSqlRaw(sql_p).ToList();
+                        var docDetailCity = context.DocDetail3HeadModelList.FromSqlRaw(sql_c).ToList();
+                        var docDetailDate = context.DocDetail3HeadModelList.FromSqlRaw(sql_date).ToList();
 
                         #endregion รายละเอียด head
 
@@ -3518,7 +3515,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //      where c.dta_type = 2
                             //      and c.dh_code = '" + value.id_doc + "' and c.dta_appr_empid = '" + user_id + "' ";
 
-                            var role_cap = context.DocDetail3HeadModels
+                            var role_cap = context.DocDetail3HeadModelList
                                 .FromSqlRaw(@"SELECT TO_CHAR(COUNT(1)) AS action_status FROM bz_doc_traveler_approver c WHERE c.dta_type = 2 AND c.dh_code = :id_doc AND c.dta_appr_empid = :user_id",
                                     context.ConvertTypeParameter("id_doc", id_doc, "char"),
                                     context.ConvertTypeParameter("user_id", user_id, "char"))
@@ -3531,14 +3528,15 @@ namespace top.ebiz.service.Service.Create_trip
                             //      from bz_doc_traveler_approver c
                             //      where c.dta_type = 1
                             //      and c.dh_code = '" + value.id_doc + "' and c.dta_appr_empid = '" + user_id + "' ";
-                            var role_line = context.DocDetail3HeadModels
+                            var role_line = context.DocDetail3HeadModelList
     .FromSqlRaw(@"SELECT TO_CHAR(COUNT(1)) AS action_status
                  FROM bz_doc_traveler_approver c
                  WHERE c.dta_type = 1
                  AND c.dh_code = :id_doc
                  AND c.dta_appr_empid = :user_id",
         context.ConvertTypeParameter("id_doc", value.id_doc, "char"),
-        context.ConvertTypeParameter("user_id", user_id, "char"))
+        context.ConvertTypeParameter("user_id", user_id, "char")
+        )
     .ToList();
                             if (role_line != null && role_line.Count > 0 && role_line[0].action_status != "0")
                             { role_in_doc = "2"; }
@@ -3548,7 +3546,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //      from bz_doc_traveler_approver c
                             //      where c.dta_type = 1
                             //      and c.dh_code = '" + value.id_doc + "'  and c.dta_travel_empid = '" + user_id + "' ";
-                            var role_traveler = context.DocDetail3HeadModels
+                            var role_traveler = context.DocDetail3HeadModelList
     .FromSqlRaw(@"SELECT TO_CHAR(COUNT(1)) AS action_status
                       FROM bz_doc_traveler_approver c
                       WHERE c.dta_type = 1
@@ -3567,7 +3565,7 @@ namespace top.ebiz.service.Service.Create_trip
                         #region DevFix 20210527 0000 เพิ่มข้อมูลไฟล์แนบ
                         // sql = @" select DH_CODE, to_CHAR(DF_ID) as DF_ID, DF_NAME, DF_PATH, DF_REMARK 
                         //         from BZ_DOC_FILE where DH_CODE = '" + value.id_doc + "' order by  DF_ID ";
-                        var docFile = context.DocFileListModels
+                        var docFile = context.DocFileListModelList
     .FromSqlRaw(@"SELECT DH_CODE, 
                     TO_CHAR(DF_ID) AS DF_ID, 
                     DF_NAME, 
@@ -3815,7 +3813,7 @@ namespace top.ebiz.service.Service.Create_trip
                             // - ต้องหาว่า CAP ของ Line ที่เข้ามาดู
                             var emp_id_under_cap = "";
                             // sql = "select to_char(dta_type) as approve_role_type, dta_travel_empid as emp_id from bz_doc_traveler_approver c where  c.dta_type = 1 and c.dta_appr_empid = '" + user_id + "'  and c.dh_code = '" + value.id_doc + "' ";
-                            var approver_role = context.DocDetail3HeadModels
+                            var approver_role = context.DocDetail3HeadModelList
     .FromSqlRaw(@"
     SELECT TO_CHAR(dta_type) AS approve_role_type, 
            dta_travel_empid AS emp_id 
@@ -3885,7 +3883,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                             sql += "  order by ex.dte_id "; ***/
 
-                            var docDetail3Head_2 = context.DocDetail3HeadModels
+                            var docDetail3Head_2 = context.DocDetail3HeadModelList
     .FromSqlRaw(@"
     SELECT ct.ctn_name AS continent, 
            cr.ct_name AS country, 
@@ -3970,7 +3968,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 // sql = @" select a.dta_travel_empid as emp_id
                                 //                 from bz_doc_traveler_approver  a 
                                 //                 where  a.dh_code  = '" + value.id_doc + "' and a.dta_appr_empid = '" + user_id + "'";
-                                var apprlist = context.DocDetail3HeadModels
+                                var apprlist = context.DocDetail3HeadModelList
     .FromSqlRaw(@"SELECT a.dta_travel_empid AS emp_id 
                   FROM bz_doc_traveler_approver a 
                   WHERE a.dh_code = :id_doc AND a.dta_appr_empid = :user_id",
@@ -4168,7 +4166,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //          from BZ_DOC_TRAVELER_APPROVER a
                             //          where dta_action_status >  2 and a.dta_type = 2 and dh_code = :id_doc";
 
-                            var dataCheck_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(count(1)) as approve_status from BZ_DOC_TRAVELER_APPROVER a where dta_action_status >  2 and a.dta_type = 2 and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char"))
+                            var dataCheck_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(count(1)) as approve_status from BZ_DOC_TRAVELER_APPROVER a where dta_action_status >  2 and a.dta_type = 2 and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                                         .ToList();
 
                             if (dataCheck_Def != null && dataCheck_Def.Count > 0)
@@ -4196,36 +4194,36 @@ namespace top.ebiz.service.Service.Create_trip
 
                             sql += " order by dta_appr_level";
 
-                            var dataApprover_Def = context.TravelerApproverConditionModels
+                            var dataApprover_Def = context.TravelerApproverConditionModelList
                                                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                                         .ToList();
 
                             #region DevFix 20211013 - Check if the step CAP has been rejected
-                            var dataApproverLine_Def = context.TravelerApproverConditionModels
+                            var dataApproverLine_Def = context.TravelerApproverConditionModelList
                                                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                                         .ToList();
 
-                            var dataApproverLine2_Def = context.TravelerApproverConditionModels
+                            var dataApproverLine2_Def = context.TravelerApproverConditionModelList
                                                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                                         .ToList();
 
-                            var dataApproverLine3_Def = context.TravelerApproverConditionModels
+                            var dataApproverLine3_Def = context.TravelerApproverConditionModelList
                                                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                                         .ToList();
 
-                            var dataApproverCAP_Def = context.TravelerApproverConditionModels
+                            var dataApproverCAP_Def = context.TravelerApproverConditionModelList
                                                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                                         .ToList();
 
-                            var dataApproverCAP2_Def = context.TravelerApproverConditionModels
+                            var dataApproverCAP2_Def = context.TravelerApproverConditionModelList
                                                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                                         .ToList();
 
-                            var dataApproverCAP3_Def = context.TravelerApproverConditionModels
+                            var dataApproverCAP3_Def = context.TravelerApproverConditionModelList
                                                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char"))
                                                         .ToList();
 
-                            var dataApproverCAP3Level_Def = context.TravelerApproverConditionModels
+                            var dataApproverCAP3Level_Def = context.TravelerApproverConditionModelList
                                                         .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", id_doc, "char")
 
                                                         )
@@ -4241,7 +4239,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where dte_appr_opt = 'true' and dte_status = 1 and dte_appr_status <> 23
                                 //          and dh_code = '" + value.id_doc + "' ";
-                                dataApproverLine_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverLine_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '3' as approve_status, dte_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where dte_appr_opt = 'true' and dte_status = 1 and dte_appr_status <> 23
@@ -4253,7 +4251,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where ((dte_appr_opt = 'false' and dte_status = 1) or dte_appr_status = 30 )
                                 //          and dh_code = '" + value.id_doc + "' ";
-                                dataApproverLine2_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverLine2_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '5' as approve_status, dte_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where ((dte_appr_opt = 'false' and dte_status = 1) or dte_appr_status = 30 )
@@ -4264,7 +4262,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          , '2' as approve_status, dte_appr_remark as approve_remark
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where dte_status = 1 and dte_appr_status = 31 and dh_code = '" + value.id_doc + "' ";
-                                dataApproverLine3_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverLine3_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '2' as approve_status, dte_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where dte_status = 1 and dte_appr_status = 31 and dh_code = :id_doc", context.ConvertTypeParameter("id_doc", id_doc, "char")).ToList();
@@ -4276,7 +4274,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where nvl(dte_cap_appr_status,41) = '42' and (dte_cap_appr_opt = 'true' and dte_appr_opt = 'true') and dte_status = 1
                                 //          and dh_code = '" + value.id_doc + "' ";
-                                dataApproverCAP_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverCAP_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '3' as approve_status, dte_cap_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where nvl(dte_cap_appr_status,41) = '42' and (dte_cap_appr_opt = 'true' and dte_appr_opt = 'true') and dte_status = 1
@@ -4288,7 +4286,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          from BZ_DOC_TRAVELER_EXPENSE a 
                                 //          where nvl(dte_cap_appr_status,41) = '42' and ( (dte_cap_appr_opt = 'false' and dte_status = 1) or (dte_appr_opt = 'false' and dte_appr_status = 32) or dte_cap_appr_status = 40 )
                                 //          and dh_code = '" + value.id_doc + "' ";
-                                dataApproverCAP2_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverCAP2_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '5' as approve_status, dte_cap_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where nvl(dte_cap_appr_status,41) = '42' and ( (dte_cap_appr_opt = 'false' and dte_status = 1) or (dte_appr_opt = 'false' and dte_appr_status = 32) or dte_cap_appr_status = 40 )
@@ -4301,7 +4299,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 //          where dte_status = 1 and (dte_cap_appr_status = 41 or (dte_cap_appr_status is null and  dte_appr_status = 32 and dte_appr_opt = 'true' ) )
                                 //          and dh_code = '" + value.id_doc + "' ";
 
-                                dataApproverCAP3_Def = context.TravelerApproverConditionModels.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
+                                dataApproverCAP3_Def = context.TravelerApproverConditionModelList.FromSqlRaw(@" select to_char(dte_token) as traveler_ref_id, dte_emp_id as emp_id
                                          , '2' as approve_status, dte_cap_appr_remark as approve_remark
                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                          where dte_status = 1 and (dte_cap_appr_status = 41 or (dte_cap_appr_status is null and  dte_appr_status = 32 and dte_appr_opt = 'true' ) )
@@ -4331,20 +4329,18 @@ namespace top.ebiz.service.Service.Create_trip
                                         check_data = dataApproverCAP_Def.Where(t => t.emp_id == item.emp_id && t.traveler_ref_id == item.traveler_ref_id);
                                         if (check_data.Count() > 0)
                                         {
-                                            //  sql = @" select distinct to_char(dta_appr_level) as approve_level from BZ_DOC_TRAVELER_APPROVER 
-                                            //                                              where dta_type = 2 and dta_appr_level > 1 and dh_code = '" + value.id_doc + "' and dta_travel_empid = '" + item.emp_id + "'  ";
-                                            //                                         sql += @" and dta_appr_empid = '" + item.appr_id + "' ";
-                                            var dtListApprLevel = context.TravelerApproverConditionModels
-                                                                        .FromSqlRaw(@" select distinct to_char(dta_appr_level) as approve_level 
-             from BZ_DOC_TRAVELER_APPROVER 
-             where dta_type = 2 and dta_appr_level > 1 
-             and dh_code = :id_doc 
-             and dta_travel_empid = :emp_id
-             and dta_appr_empid = :appr_id",
-                                                                            context.ConvertTypeParameter("id_doc", id_doc, "char"),
-                                                                            context.ConvertTypeParameter("emp_id", item.emp_id, "char"),
-                                                                            context.ConvertTypeParameter("appr_id", item.appr_id, "char"))
-                                                                        .ToList();
+                                            sql = @" select distinct to_char(dta_appr_level) as approve_level 
+                                                     from BZ_DOC_TRAVELER_APPROVER 
+                                                     where dta_type = 2 and dta_appr_level > 1 
+                                                     and dh_code = :id_doc 
+                                                     and dta_travel_empid = :emp_id
+                                                     and dta_appr_empid = :appr_id";
+
+                                            var parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("id_doc", id_doc, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("emp_id", item.emp_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("appr_id", item.appr_id, "char"));
+                                            var dtListApprLevel = context.TravelerApproverConditionModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
 
                                             if (dtListApprLevel.Count > 0)
@@ -4359,29 +4355,27 @@ namespace top.ebiz.service.Service.Create_trip
                                                             sql += " UNION "; // Add union if sql is not empty
                                                         }
 
-                                                        sql += @"
-                SELECT TO_CHAR(dte_token) AS traveler_ref_id, dte_emp_id AS emp_id,
-                '2' AS approve_status, dte_cap_appr_remark AS approve_remark
-                FROM BZ_DOC_TRAVELER_EXPENSE a  
-                WHERE dte_status = 1 
-                AND dte_cap_appr_status = 42
-                AND (dte_emp_id, dh_code) IN (
-                    SELECT dta_travel_empid, dh_code 
-                    FROM BZ_DOC_TRAVELER_APPROVER
-                    WHERE dta_type = 2 
-                    AND dta_doc_status = 41 
-                    AND dta_appr_level = {apprlist.approve_level}
-                ) 
-                AND dh_code = :id_doc 
-                AND dte_emp_id = :emp_id";
-
+                                                        sql += @" SELECT TO_CHAR(dte_token) AS traveler_ref_id, dte_emp_id AS emp_id,
+                                                                     '2' AS approve_status, dte_cap_appr_remark AS approve_remark
+                                                                     FROM BZ_DOC_TRAVELER_EXPENSE a  
+                                                                     WHERE dte_status = 1 
+                                                                     AND dte_cap_appr_status = 42
+                                                                     AND (dte_emp_id, dh_code) IN (
+                                                                         SELECT dta_travel_empid, dh_code 
+                                                                         FROM BZ_DOC_TRAVELER_APPROVER
+                                                                         WHERE dta_type = 2 
+                                                                         AND dta_doc_status = 41 
+                                                                         AND dta_appr_level = {apprlist.approve_level}
+                                                                     ) 
+                                                                     AND dh_code = :id_doc 
+                                                                     AND dte_emp_id = :emp_id";
                                                     }
 
+                                                    parameters = new List<OracleParameter>();
+                                                    parameters.Add(context.ConvertTypeParameter("id_doc", id_doc, "char"));
+                                                    parameters.Add(context.ConvertTypeParameter("emp_id", item.emp_id, "char"));
 
-                                                    dataApproverCAP3Level_Def = context.TravelerApproverConditionModels
-                                                        .FromSqlRaw(sql, context.ConvertTypeParameter("id_doc", value.id_doc, "char"),
-                                                        context.ConvertTypeParameter("emp_id", item.emp_id, "char"))
-                                                        .ToList();
+                                                    dataApproverCAP3Level_Def = context.TravelerApproverConditionModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                                                     check_data = dataApproverCAP3Level_Def.Where(t => t.emp_id == item.emp_id && t.traveler_ref_id == item.traveler_ref_id);
                                                 }
@@ -4513,7 +4507,7 @@ namespace top.ebiz.service.Service.Create_trip
                             //                    ORDER BY DTA_TRAVEL_EMPID";
 
                             // Query to retrieve travelers in CAP
-                            var traverler_in_cap = context.SearchCAPModels.FromSqlRaw(@"SELECT DISTINCT DTA_TRAVEL_EMPID 
+                            var traverler_in_cap = context.SearchCAPModelList.FromSqlRaw(@"SELECT DISTINCT DTA_TRAVEL_EMPID 
                             FROM BZ_DOC_TRAVELER_APPROVER A 
                             WHERE A.DTA_TYPE = 2 AND A.DH_CODE = :id_doc AND A.DTA_APPR_EMPID = :user_id
                             ORDER BY DTA_TRAVEL_EMPID",
@@ -4537,7 +4531,7 @@ namespace top.ebiz.service.Service.Create_trip
                                     //         ORDER BY DTA_TRAVEL_EMPID, DTA_APPR_LEVEL DESC";
 
                                     // Query to retrieve action CAP details
-                                    var action_cap = context.SearchCAPModels.FromSqlRaw(@"SELECT DTA_TRAVEL_EMPID, to_char(DTA_APPR_LEVEL) as DTA_APPR_LEVEL, DTA_APPR_EMPID, to_char(DTA_ACTION_STATUS) as DTA_ACTION_STATUS 
+                                    var action_cap = context.SearchCAPModelList.FromSqlRaw(@"SELECT DTA_TRAVEL_EMPID, to_char(DTA_APPR_LEVEL) as DTA_APPR_LEVEL, DTA_APPR_EMPID, to_char(DTA_ACTION_STATUS) as DTA_ACTION_STATUS 
                                     FROM BZ_DOC_TRAVELER_APPROVER A 
                                     WHERE A.DTA_TYPE = 2 AND A.DH_CODE = :id_doc AND A.DTA_TRAVEL_EMPID = :traverler_id_def 
                                     ORDER BY DTA_TRAVEL_EMPID, DTA_APPR_LEVEL DESC",
@@ -4607,7 +4601,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                                 // sql = @"select distinct to_char(pmdv_admin) as type 
                                 //     from bz_data_manage where pmdv_admin = 'true' and emp_id = '" + user_id + "' ";
-                                var pmdv_admin_list = context.ApproverModels.FromSqlRaw(" select distinct to_char(pmdv_admin) as type from bz_data_manage " +
+                                var pmdv_admin_list = context.ApproverModelList.FromSqlRaw(" select distinct to_char(pmdv_admin) as type from bz_data_manage " +
                                 " where pmdv_admin = 'true' and emp_id = : user_id", context.ConvertTypeParameter("user_id", user_id, "char")).ToList();
                                 if (pmdv_admin_list != null)
                                 {
@@ -4714,42 +4708,42 @@ namespace top.ebiz.service.Service.Create_trip
         {
             ExchangeRatesModel ex_rate = new ExchangeRatesModel();
             DataTable dt = new DataTable();
-            string sqlstr = "";
             try
             {
-                //cls_connection_cpai conn = new cls_connection_cpai();
-                //conn.OpenConnection();
-                //dt = conn.ExecuteAdapter(@" select t_fxb_cur as ex_cur, t_fxb_value1 as ex_value1
-                //                            ,to_char(to_date(t_fxb_valdate,'yyyyMMdd') ,'dd Mon rrrr')   as ex_date
-                //                            from CMDB.VW_FX_TYPE_M 
-                //                            where  t_fxb_cur = 'USD' 
-                //                            and t_fxb_valdate in (select  max(t_fxb_valdate) from CMDB.VW_FX_TYPE_M where  t_fxb_cur = 'USD' )").Tables[0];
-                //conn.CloseConnection(); 
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
+                {
+                    //cls_connection_cpai conn = new cls_connection_cpai();
+                    //conn.OpenConnection();
+                    //dt = conn.ExecuteAdapter(@" select t_fxb_cur as ex_cur, t_fxb_value1 as ex_value1
+                    //                            ,to_char(to_date(t_fxb_valdate,'yyyyMMdd') ,'dd Mon rrrr')   as ex_date
+                    //                            from CMDB.VW_FX_TYPE_M 
+                    //                            where  t_fxb_cur = 'USD' 
+                    //                            and t_fxb_valdate in (select  max(t_fxb_valdate) from CMDB.VW_FX_TYPE_M where  t_fxb_cur = 'USD' )").Tables[0];
+                    //conn.CloseConnection(); 
 
-                //ws_conn.wsConnection conn = new ws_conn.wsConnection();
-                //dt = conn.adapter_data(@" select t_fxb_cur as ex_cur, t_fxb_value1 as ex_value1  ,to_char(to_date(t_fxb_valdate,'yyyyMMdd') ,'dd Mon rrrr')   as ex_date  from BZ_DATA_FX_TYPE_M  where  t_fxb_cur = 'USD'   and t_fxb_valdate in (select  max(t_fxb_valdate) from BZ_DATA_FX_TYPE_M where  t_fxb_cur = 'USD' )");
+                    //ws_conn.wsConnection conn = new ws_conn.wsConnection();
+                    //dt = conn.adapter_data(@" select t_fxb_cur as ex_cur, t_fxb_value1 as ex_value1  ,to_char(to_date(t_fxb_valdate,'yyyyMMdd') ,'dd Mon rrrr')   as ex_date  from BZ_DATA_FX_TYPE_M  where  t_fxb_cur = 'USD'   and t_fxb_valdate in (select  max(t_fxb_valdate) from BZ_DATA_FX_TYPE_M where  t_fxb_cur = 'USD' )");
 
-                sqlstr = @" select t_fxb_cur as ex_cur, t_fxb_value1 as ex_value1
+                    sql = @" select t_fxb_cur as ex_cur, t_fxb_value1 as ex_value 
                                     ,to_char(to_date(t_fxb_valdate,'yyyyMMdd') ,'dd Mon rrrr')   as ex_date
                                     from BZ_DATA_FX_TYPE_M
-                                    where  t_fxb_cur = 'USD' 
-                                    and t_fxb_valdate in (select  max(t_fxb_valdate) from BZ_DATA_FX_TYPE_M where  t_fxb_cur = 'USD' )";
+                                    where t_fxb_cur = 'USD' 
+                                    and t_fxb_valdate in (select max(t_fxb_valdate) from BZ_DATA_FX_TYPE_M where  t_fxb_cur = 'USD' )";
 
-                cls_connection_ebiz conn = new cls_connection_ebiz();
-                conn.OpenConnection();
-                dt = conn.ExecuteAdapter(sqlstr).Tables[0];
-                conn.CloseConnection();
+                    var parameters = new List<OracleParameter>();
+                    var data = context.ExchangeRatesModelList.FromSqlRaw(sql, parameters.ToArray()).FirstOrDefault();
 
-                if (dt.Rows.Count > 0)
-                {
-                    ex_rate = new ExchangeRatesModel();
-                    ex_rate.ex_value1 = dt.Rows[0]["ex_value1"].ToString();
-                    ex_rate.ex_cur = dt.Rows[0]["ex_cur"].ToString();
-                    ex_rate.ex_date = dt.Rows[0]["ex_date"].ToString();
+                    if (data != null)
+                    {
+                        ex_rate = new ExchangeRatesModel();
+                        ex_rate.ex_value1 = data.ex_value1 ?? "";
+                        ex_rate.ex_cur = data.ex_cur ?? "";
+                        ex_rate.ex_date = data.ex_date ?? "";
+                    }
+                    msg = "";
                 }
-                msg = "";
             }
-            catch (Exception ex) { msg = ex.Message.ToString() + " sql:" + sqlstr; }
+            catch (Exception ex) { msg = ex.Message.ToString() + " sql:" + sql; }
 
             return ex_rate;
         }

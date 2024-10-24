@@ -2,26 +2,12 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
+using top.ebiz.service.Service.Create_Trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class logoutController : ApiController
-
-
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class logoutController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public logoutController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
+    { 
 
         // GET: api/logout
         public IEnumerable<string> Get()
@@ -36,12 +22,11 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/logout
-        [HttpPost]
+        [HttpPost("logout", Name = "logout")]
         public IActionResult Post([FromBody] logoutModel value)
         {
             if (value == null) return null;
-
-
+             
             logModel mLog = new logModel();
             mLog.module = "logout";
             mLog.tevent = "";

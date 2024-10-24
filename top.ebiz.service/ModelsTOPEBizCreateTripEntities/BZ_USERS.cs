@@ -72,4 +72,6 @@ namespace top.ebiz.service
         public string GLACCOUNT { get; set; }
         public string USERTYPE { get; set; }
     }
+     
+
 }

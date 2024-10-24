@@ -1,9 +1,11 @@
 ﻿
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Oracle.ManagedDataAccess.Client;
 using top.ebiz.service.Models.Create_Trip;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace top.ebiz.service.Service.Create_trip
+namespace top.ebiz.service.Service.Create_Trip
 {
     public class EstimateExpenseService
     {
@@ -17,12 +19,21 @@ namespace top.ebiz.service.Service.Create_trip
             try
             {
                 decimal iTravelDate = 0;
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
-                    var query = "";
-                    query = "SELECT DTE_TRAVEL_TODATE travelDate ";
-                    query += " FROM BZ_DOC_TRAVELER_EXPENSE where DH_CODE='" + value.doc_no + "' and DTE_EMP_ID='" + value.emp_id + "' ";
-                    DateTime? travelDate = context.Database.SqlQuery<EstExpTravelDateModel>(query).ToList().FirstOrDefault()?.travelDate;
+                    var doc_no = value.doc_no ?? "";
+                    var emp_id = value.emp_id ?? "";
+
+                    var sql = "";
+                    sql = "SELECT DTE_TRAVEL_TODATE travelDate ";
+                    sql += " FROM BZ_DOC_TRAVELER_EXPENSE where DH_CODE= :doc_no and DTE_EMP_ID= :emp_id ";
+
+                    var parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("doc_no", doc_no, "char"));
+                    parameters.Add(context.ConvertTypeParameter("emp_id", emp_id, "char"));
+                    DateTime? travelDate = context.EstExpTravelDateModelList.FromSqlRaw(sql, parameters.ToArray()).ToList().FirstOrDefault()?.travelDate;
+
+
                     if (travelDate != null)
                     {
                         iTravelDate = Convert.ToDecimal(Convert.ToDateTime(travelDate).ToString("yyyyMMdd", new System.Globalization.CultureInfo("en-US")));
@@ -35,10 +46,13 @@ namespace top.ebiz.service.Service.Create_trip
                     if (iTravelDate == 0)
                         return dataOutput;
 
-                    query = "select SUBTY type, TO_NUMBER(nvl(MNDAT,'0')) to_date, TO_NUMBER(nvl(TERMN,'0')) from_date, TO_DATE(MNDAT, 'YYYYMMDD') to_date_date ";
-                    query += " from BZ_ZESS_PA0019 ";
-                    query += " where PERNR='" + value.emp_id + "' and SUBTY in ('AE', 'LC') ";
-                    var sapList = context.Database.SqlQuery<EstExpSAPModel>(query).ToList();
+                    sql = "select SUBTY type, TO_NUMBER(nvl(MNDAT,'0')) to_date, TO_NUMBER(nvl(TERMN,'0')) from_date, TO_DATE(MNDAT, 'YYYYMMDD') to_date_date ";
+                    sql += " from BZ_ZESS_PA0019 ";
+                    sql += " where SUBTY in ('AE', 'LC') and PERNR= :emp_id ";
+ 
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("emp_id", emp_id, "char"));
+                    var sapList = context.EstExpSAPModelList.FromSqlRaw(sql, parameters.ToArray()).ToList() ;
 
                     bool inCase = false;
 

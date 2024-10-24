@@ -1,26 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 namespace top.ebiz.service.Controllers.Create_Trip
 {
-    //public class WBSController : ApiController
-
-    [ApiController]
-    [Route("api/[controller]")]
     public class WBSController : ControllerBase
     {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public WBSController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
-
         // GET: api/WBS
         public IEnumerable<string> Get()
         {
@@ -34,7 +19,7 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/WBS
-        [HttpPost]
+        [HttpPost("WBS", Name = "WBS")]
         public IActionResult Post([FromBody] WBSInputModel value)
         {
             if (value == null) return null;

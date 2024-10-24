@@ -1,25 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class docFlow3Controller : ApiController
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class docFlow3Controller : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public docFlow3Controller(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
+    { 
         // GET: api/docFlow3
         public IEnumerable<string> Get()
         {
@@ -32,8 +19,8 @@ namespace top.ebiz.service.Controllers.Create_Trip
             return "value";
         }
 
-        // POST: api/docFlow3
-        [HttpPost]
+        // POST: api/docFlow3 
+        [HttpPost("docFlow3", Name = "docFlow3")]
         public IActionResult Post([FromBody] DocFlow3Model value)
         {
             if (value == null) return null;
@@ -47,7 +34,7 @@ namespace top.ebiz.service.Controllers.Create_Trip
             logService.insertLog(mLog);
 
             HttpResponseMessage response = null;
-            documentService service = new documentService();
+            var service = new documentService();
             object result = service.submitFlow3(value);
 
             // Serialize the result to JSON

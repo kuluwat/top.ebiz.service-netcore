@@ -1,27 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class EstimateExpenseController : ApiController
-
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class EstimateExpenseController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public EstimateExpenseController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
-
+    { 
         // GET: api/EstimateExpense
         public IEnumerable<string> Get()
         {
@@ -39,9 +24,8 @@ namespace top.ebiz.service.Controllers.Create_Trip
             return "value";
         }
 
-        // POST: api/EstimateExpense
-        // POST: api/Company
-        [HttpPost]
+        // POST: api/EstimateExpense 
+        [HttpPost("EstimateExpense", Name = "EstimateExpense")]
         public IActionResult Post([FromBody] EstExpInputModel value)
         {
             if (value == null) return null;

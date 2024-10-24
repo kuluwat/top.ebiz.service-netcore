@@ -6,7 +6,7 @@ using System.Configuration;
 using Microsoft.Exchange.WebServices.Data;
 using top.ebiz.service.Models.Create_Trip;
 
-namespace top.ebiz.service.Service.Create_trip
+namespace top.ebiz.service.Service.Create_Trip
 {
     public class sendEmailService
     {

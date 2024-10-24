@@ -2,25 +2,12 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
+using top.ebiz.service.Service.Create_Trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class loginProfileController : ApiController
-
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class loginProfileController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public loginProfileController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
+    { 
         // GET: api/loginProfile
         public IEnumerable<string> Get()
         {
@@ -34,12 +21,11 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/loginProfile
-        [HttpPost]
+        [HttpPost("loginProfile", Name = "loginProfile")]
         public IActionResult Post([FromBody] loginProfileModel value)
         {
             if (value == null) return null;
-
-
+             
             logModel mLog = new logModel();
             mLog.module = "loginProfile";
             mLog.tevent = "";

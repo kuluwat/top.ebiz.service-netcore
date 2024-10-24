@@ -40,14 +40,23 @@ namespace top.ebiz.service.Models.Create_Trip
     }
     public class TypeModel
     {
+<<<<<<<< HEAD:top.ebiz.service/ModelsTOPEBizCreateTripEntities/DocDetail2Model.cs
         public List<EmployeeDoc2Model> employee { get; set; } = new List<EmployeeDoc2Model>();
         public List<TravelerDoc2Model> traveler { get; set; } = new List<TravelerDoc2Model>();
+========
+        public List<employeeDoc2Model> employee { get; set; } = new List<employeeDoc2Model>();
+        public List<travelerDoc2Model> traveler { get; set; } = new List<travelerDoc2Model>();
+>>>>>>>> 482f1d7a636a59ab02679f00e730220c207cdee4:top.ebiz.service/Models/Create_Trip/DocDetail2Model.cs
         public List<doc2ApproverModel> approver { get; set; } = new List<doc2ApproverModel>();
         public string checkbox_1 { get; set; }
         public string checkbox_2 { get; set; }
         public string remark { get; set; }
     }
+<<<<<<<< HEAD:top.ebiz.service/ModelsTOPEBizCreateTripEntities/DocDetail2Model.cs
     public class EmployeeDoc2Model
+========
+    public class employeeDoc2Model
+>>>>>>>> 482f1d7a636a59ab02679f00e730220c207cdee4:top.ebiz.service/Models/Create_Trip/DocDetail2Model.cs
     {
         public string ref_id { get; set; }
         public string id { get; set; }
@@ -175,7 +184,7 @@ namespace top.ebiz.service.Models.Create_Trip
     //DevFix 20200827 2349 Exchange Rates as of -->ExchangeRatesModel
     public class ExchangeRatesModel
     {
-        public string ex_value1 { get; set; }
+        public string ex_value1  { get; set; }
         public string ex_date { get; set; }
         public string ex_cur { get; set; }
     }

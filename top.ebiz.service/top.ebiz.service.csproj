@@ -7,10 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\CreateFlowController.cs" />
     <Compile Remove="Controllers\SAPZTHROMB004Controller.cs" />
     <Compile Remove="Service\SAPService.cs" />
     <Compile Remove="Service\SAP_ZTHRTEB004.asmx.cs" />
     <Compile Remove="Service\SAP_ZTHRTEB020.asmx.cs" />
+    <Compile Remove="Service\searchDocService.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,11 +29,15 @@
     <PackageReference Include="Microsoft.Exchange.WebServices" Version="2.2.0" />
     <PackageReference Include="Oracle.EntityFrameworkCore" Version="8.23.60" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.9.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Web.Services.Description" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Controllers\Traveler_Profile\" />
+    <Folder Include="Models\Traveler_Profile\" />
+    <Folder Include="Service\Traveler_Profile\" />
     <Folder Include="temp\" />
   </ItemGroup>
 

@@ -4,78 +4,85 @@ using System.Data.Common;
 using System.Data;
 using top.ebiz.service.Models.Create_Trip;
 
-namespace top.ebiz.service.Service.Create_trip
+namespace top.ebiz.service.Service.Create_Trip
 {
     public class logService
     {
         public static int insertLog(logModel value)
         {
             int iResult = -1;
-
-            // ใช้ EF Core DbContext
-            using (var context = new TOPEBizEntities())
+            try
             {
-                // เปิดการเชื่อมต่อกับฐานข้อมูล
-                using (var connection = context.Database.GetDbConnection())
+                // ใช้ EF Core DbContext
+                using (var context = new TOPEBizCreateTripEntities())
                 {
-                    connection.Open();
-
-                    // สร้าง DbCommand เพื่อเรียก stored procedure
-                    using (var cmd = connection.CreateCommand())
+                    // เปิดการเชื่อมต่อกับฐานข้อมูล
+                    using (var connection = context.Database.GetDbConnection())
                     {
-                        cmd.CommandText = "bz_sp_insert_log";
-                        cmd.CommandType = CommandType.StoredProcedure;
+                        connection.Open();
 
-                        // เพิ่มพารามิเตอร์ต่าง ๆ ที่ต้องการ
-                        cmd.Parameters.Add(new OracleParameter("p_module", value.module));
-                        cmd.Parameters.Add(new OracleParameter("p_event", value.tevent));
-                        cmd.Parameters.Add(new OracleParameter("p_data_log", value.data_log));
-                        cmd.Parameters.Add(new OracleParameter("p_ref_id", value.ref_id));
-                        cmd.Parameters.Add(new OracleParameter("p_ref_code", value.ref_code));
-                        cmd.Parameters.Add(new OracleParameter("p_user_log", value.user_log));
-                        cmd.Parameters.Add(new OracleParameter("p_user_token", value.user_token));
+                        // สร้าง DbCommand เพื่อเรียก stored procedure
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "bz_sp_insert_log";
+                            cmd.CommandType = CommandType.StoredProcedure;
 
-                        // เรียก ExecuteNonQuery เพื่อดำเนินการ stored procedure
-                        iResult = cmd.ExecuteNonQuery();
+                            // เพิ่มพารามิเตอร์ต่าง ๆ ที่ต้องการ
+                            cmd.Parameters.Add(new OracleParameter("p_module", value.module));
+                            cmd.Parameters.Add(new OracleParameter("p_event", value.tevent));
+                            cmd.Parameters.Add(new OracleParameter("p_data_log", value.data_log));
+                            cmd.Parameters.Add(new OracleParameter("p_ref_id", value.ref_id));
+                            cmd.Parameters.Add(new OracleParameter("p_ref_code", value.ref_code));
+                            cmd.Parameters.Add(new OracleParameter("p_user_log", value.user_log));
+                            cmd.Parameters.Add(new OracleParameter("p_user_token", value.user_token));
+
+                            // เรียก ExecuteNonQuery เพื่อดำเนินการ stored procedure
+                            iResult = cmd.ExecuteNonQuery();
+                        }
                     }
                 }
             }
-
+            catch (Exception ex) { }
             return iResult;
         }
 
         public static int insertLogTest(logModel value)
         {
             int iResult = -2;
-
-            // ใช้ EF Core DbContext 
-            using (var context = new TOPEBizEntities())
+            try
             {
-                // เปิดการเชื่อมต่อกับฐานข้อมูล
-                using (var connection = context.Database.GetDbConnection())
+
+                // ใช้ EF Core DbContext 
+                using (var context = new TOPEBizCreateTripEntities())
                 {
-                    connection.Open();
-
-                    // สร้าง DbCommand เพื่อเรียก stored procedure
-                    using (var cmd = connection.CreateCommand())
+                    // เปิดการเชื่อมต่อกับฐานข้อมูล
+                    using (var connection = context.Database.GetDbConnection())
                     {
-                        cmd.CommandText = "bz_sp_insert_log";
-                        cmd.CommandType = CommandType.StoredProcedure;
+                        connection.Open();
 
-                        // เพิ่มพารามิเตอร์ต่าง ๆ ที่ต้องการ
-                        cmd.Parameters.Add(new OracleParameter("p_module", value.module));
-                        cmd.Parameters.Add(new OracleParameter("p_event", value.tevent));
-                        cmd.Parameters.Add(new OracleParameter("p_data_log", value.data_log));
-                        cmd.Parameters.Add(new OracleParameter("p_ref_id", value.ref_id));
-                        cmd.Parameters.Add(new OracleParameter("p_ref_code", value.ref_code));
-                        cmd.Parameters.Add(new OracleParameter("p_user_log", value.user_log));
-                        cmd.Parameters.Add(new OracleParameter("p_user_token", value.user_token));
+                        // สร้าง DbCommand เพื่อเรียก stored procedure
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "bz_sp_insert_log";
+                            cmd.CommandType = CommandType.StoredProcedure;
 
-                        // เรียก ExecuteNonQuery เพื่อดำเนินการ stored procedure
-                        iResult = cmd.ExecuteNonQuery();
+                            // เพิ่มพารามิเตอร์ต่าง ๆ ที่ต้องการ
+                            cmd.Parameters.Add(new OracleParameter("p_module", value.module));
+                            cmd.Parameters.Add(new OracleParameter("p_event", value.tevent));
+                            cmd.Parameters.Add(new OracleParameter("p_data_log", value.data_log));
+                            cmd.Parameters.Add(new OracleParameter("p_ref_id", value.ref_id));
+                            cmd.Parameters.Add(new OracleParameter("p_ref_code", value.ref_code));
+                            cmd.Parameters.Add(new OracleParameter("p_user_log", value.user_log));
+                            cmd.Parameters.Add(new OracleParameter("p_user_token", value.user_token));
+
+                            // เรียก ExecuteNonQuery เพื่อดำเนินการ stored procedure
+                            iResult = cmd.ExecuteNonQuery();
+                        }
                     }
                 }
+
             }
+            catch { }
 
             return iResult;
         }

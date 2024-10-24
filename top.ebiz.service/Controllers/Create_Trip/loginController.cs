@@ -1,27 +1,14 @@
 ﻿
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
+using top.ebiz.service.Service.Create_Trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class loginController : ApiController
-
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class loginController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public loginController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
+    { 
         // GET: api/login
         public IEnumerable<string> Get()
         {
@@ -35,25 +22,25 @@ namespace top.ebiz.service.Controllers.Create_Trip
         }
 
         // POST: api/login
-        [HttpPost]
+        [HttpPost("login", Name = "login")]
         public IActionResult Post([FromBody] loginModel value)
         {
             if (value == null) return null;
+             
+            // Use System.Text.Json to serialize the object
+            var mLog = new logModel { module = "login", tevent = "", ref_id = 0, data_log = JsonSerializer.Serialize(value) };
 
-            logModel mLog = new logModel();
-            mLog.module = "login";
-            mLog.tevent = "";
-            mLog.ref_id = 0;
-            mLog.data_log = JsonSerializer.Serialize(value);
+            // Insert log
             logService.insertLog(mLog);
 
-            HttpResponseMessage response = null;
+            // Call service method
             userAuthenService service = new userAuthenService();
-            object result = service.login(value);
+            var result = service.login(value);
 
             // Serialize the result to JSON
             var json = JsonSerializer.Serialize(result);
-            return Ok(json);
+
+            return Ok(result);
         }
 
         // PUT: api/login/5

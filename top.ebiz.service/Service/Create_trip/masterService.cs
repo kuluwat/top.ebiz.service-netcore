@@ -1,34 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+﻿
 using System.Data;
 using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
 using Oracle.ManagedDataAccess.Client;
 using top.ebiz.service.Models.Create_Trip;
 
-namespace top.ebiz.service.Service.Create_trip
+namespace top.ebiz.service.Service.Create_Trip
 {
     public class masterService
     {
+        string sql = "";
         // WBS หรือ IO
         public List<WBSOutModel> getWBS(WBSInputModel value)
         {
             var data = new List<WBSOutModel>();
+            var value_text = value.text ?? "";
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
-                string sql = "";
-                sql = " select      IO wbs,  COST_CENTER_RESP cost_center ";
-                sql += " from BZ_MASTER_IO ";
-                sql += " where ROWNUM < 1000 ";
-                if (!string.IsNullOrEmpty(value.text))
+                sql = " select distinct IO wbs,  COST_CENTER_RESP cost_center from BZ_MASTER_IO where ROWNUM < 1000 ";
+                if (!string.IsNullOrEmpty(value_text))
                 {
-                    sql += " and upper(IO) like '%" + value.text.Trim().ToUpper().Replace("'", "''") + "%' ";
+                    sql += " and upper(IO) like upper('%' || :value_text  ||'%') ";
                 }
                 sql += " order by IO ";
 
-                data = context.Database.SqlQuery<WBSOutModel>(sql).ToList();
+                var parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("value_text", value_text, "char"));
+                data = context.WBSOutModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
             }
 
@@ -38,20 +37,20 @@ namespace top.ebiz.service.Service.Create_trip
         public List<CCOutModel> getCostCenter(CCInputModel value)
         {
             var data = new List<CCOutModel>();
+            var value_text = value.text ?? "";
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
-                string sql = "";
-                sql = " select     distinct COST_CENTER_RESP code ";
-                sql += " from BZ_MASTER_IO ";
-                sql += " where ROWNUM < 1000 ";
-                if (!string.IsNullOrEmpty(value.text))
+                sql = " select distinct COST_CENTER_RESP code from BZ_MASTER_IO where ROWNUM < 1000 ";
+                if (!string.IsNullOrEmpty(value_text))
                 {
-                    sql += " and upper(COST_CENTER_RESP) like '%" + value.text.Trim().ToUpper().Replace("'", "''") + "%' ";
+                    sql += " and upper(COST_CENTER_RESP) like upper('%'|| :value_text ||'%') ";
                 }
                 sql += " order by COST_CENTER_RESP ";
 
-                data = context.Database.SqlQuery<CCOutModel>(sql).ToList();
+                var parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("value_text", value_text, "char"));
+                data = context.CCOutModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
             }
 
@@ -61,20 +60,20 @@ namespace top.ebiz.service.Service.Create_trip
         public List<GLOutModel> getGLAccount(GLInputModel value)
         {
             var data = new List<GLOutModel>();
+            var value_text = value.text ?? "";
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
-                string sql = "";
-                sql = " select      GL_NO code ";
-                sql += " from BZ_MASTER_GL ";
-                sql += " where ROWNUM < 1000 ";
+                sql = " select distinct GL_NO code from BZ_MASTER_GL where ROWNUM < 1000 ";
                 if (!string.IsNullOrEmpty(value.text))
                 {
-                    sql += " and upper(GL_NO) like '%" + value.text.Trim().ToUpper().Replace("'", "''") + "%' ";
+                    sql += " and upper(GL_NO) like '%'|| :value_text ||'%') ";
                 }
                 sql += " order by GL_NO ";
 
-                data = context.Database.SqlQuery<GLOutModel>(sql).ToList();
+                var parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("value_text", value_text, "char"));
+                data = context.GLOutModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
             }
 
@@ -87,7 +86,7 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new List<RequestTypeResultModel>();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
@@ -124,38 +123,14 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new List<CompanyResultModel>();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
-                using (var connection = context.Database.GetDbConnection())
-                {
-                    //connection.Open();
-                    //DbCommand cmd = connection.CreateCommand();
-                    //cmd.CommandText = "bz_sp_get_company";
-                    //cmd.CommandType = CommandType.StoredProcedure;
-                    //cmd.Parameters.Add(new OracleParameter("p_token", value.token_login));
+                sql = @" select com_code as com_id, com_name as com_name, sort_by as com_sort_by from bz_master_company order by sort_by";
 
-                    //OracleParameter oraP = new OracleParameter();
-                    //oraP.ParameterName = "mycursor";
-                    //oraP.OracleDbType = OracleDbType.RefCursor;
-                    //oraP.Direction = ParameterDirection.Output;
-                    //cmd.Parameters.Add(oraP); 
-                    //using (var reader = cmd.ExecuteReader())
-                    //{
-                    //    try
-                    //    {
-                    //        var schema = reader.GetSchemaTable();
-                    //        data = reader.MapToList<CompanyResultModel>() ?? new List<CompanyResultModel>();
+                var parameters = new List<OracleParameter>();
+                data = context.CompanyResultModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
-                    //    }
-                    //    catch (Exception ex) { }
-                    //} 
-                    var sql = @" select com_code as com_id, com_name as com_name, sort_by as com_sort_by
-                                 from bz_master_company order by sort_by";
-                    data = context.Database.SqlQuery<CompanyResultModel>(sql).ToList();
-                    if (data != null && data.Count() > 0)
-                    {
-                    }
-                }
+                //if (data != null && data.Count() > 0) { }
             }
 
             return data;
@@ -165,13 +140,14 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new List<ContinentResultModel>();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
                     connection.Open();
                     DbCommand cmd = connection.CreateCommand();
-                    cmd.CommandText = "bz_sp_get_continent";
+                    cmd.CommandText = "bz_sp_get_continent";   
+                  
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add(new OracleParameter("p_token", value.token_login));
 
@@ -201,32 +177,32 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new List<CountryResultModel>();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
-                string sql = "";
-                sql = " select      to_char(a.ctn_id) continent_id ";
-                sql += "            , a.ctn_name continent";
-                sql += "            , to_char(b.ct_id)country_id";
-                sql += "            , b.ct_name country";
-                sql += " from       bz_master_continent a inner";
-                sql += " join       bz_master_country b on a.ctn_id = b.ctn_id";
+                var parameters = new List<OracleParameter>();
+                sql = @" select to_char(a.ctn_id) continent_id, a.ctn_name continent, to_char(b.ct_id)country_id, b.ct_name country
+                         from bz_master_continent a inner join bz_master_country b on a.ctn_id = b.ctn_id
+                         where a.ctn_id is not null ";
+
                 if (value.continent != null && value.continent.Count() > 0)
                 {
-                    string subsql = "";
+                    var index = 0;
+                    sql += " and (";
                     foreach (var item in value.continent)
                     {
-                        subsql += ", " + item.id ?? "";
-                    }
+                        var item_value = item.id ?? "";
+                        var param_name = $"p{index}";
 
-                    if (subsql.Length > 0)
-                    {
-                        subsql = subsql.Substring(1);
+                        sql += $"{(index > 0 ? " or " : "")} a.ctn_id = :{param_name} ";
+                        parameters.Add(context.ConvertTypeParameter(param_name, item_value, "char"));
+                        index++;
                     }
-
-                    sql += " where a.ctn_id in (" + subsql + ") ";
+                    sql += " ) ";
                 }
                 sql += " order by  b.ct_name ";
-                data = context.Database.SqlQuery<CountryResultModel>(sql).ToList();
+
+                data = context.CountryResultModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
             }
 
             return data;
@@ -236,7 +212,7 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new List<ProvinceResultModel>();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
@@ -273,7 +249,7 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new List<EmpSearchResultModel>();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
@@ -309,7 +285,7 @@ namespace top.ebiz.service.Service.Create_trip
 
         public void getTest()
         {
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 var data = new List<CompanyModel>();
                 var data2 = new List<CompanyModel>();

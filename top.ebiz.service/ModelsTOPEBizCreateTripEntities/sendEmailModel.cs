@@ -56,6 +56,7 @@ namespace top.ebiz.service.Models.Create_Trip
         public string name2 { get; set; }
         public string name3 { get; set; }
         public string name4 { get; set; }
+        public string email { get; set; }
     }
 
 }

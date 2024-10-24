@@ -5,26 +5,13 @@ using System.Text.Json;
 
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;
-using top.ebiz.service.Service.Create_trip;
 
 namespace top.ebiz.service.Controllers.Create_Trip
-{
-    //public class ContinentController : ApiController
-    [ApiController]
-    [Route("api/[controller]")]
+{ 
     public class ContinentController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly documentService _documentService;
-
-        // Use constructor dependency injection for services
-        public ContinentController(logService logService, documentService documentService)
-        {
-            _logService = logService;
-            _documentService = documentService;
-        }
-
+    { 
         // GET: api/Continent
         public IEnumerable<string> Get()
         {
@@ -37,8 +24,8 @@ namespace top.ebiz.service.Controllers.Create_Trip
             return "value";
         }
 
-        // POST: api/Continent
-        [HttpPost]
+        // POST: api/Continent 
+        [HttpPost("Continent", Name = "Continent")]
         public IActionResult Post([FromBody] ContinentModel value)
         {
             if (value == null) return null;
