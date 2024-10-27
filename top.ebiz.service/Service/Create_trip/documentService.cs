@@ -1,22 +1,24 @@
 ﻿
 using System.Data;
-using System.Data.Common;
-using Microsoft.EntityFrameworkCore;
+using System.Data.Common; 
+using Microsoft.EntityFrameworkCore; 
 using Oracle.ManagedDataAccess.Client;
 using top.ebiz.service.Models.Create_Trip;
+using System.IO;
 
-namespace top.ebiz.service.Service.Create_trip
+namespace top.ebiz.service.Service.Create_Trip
 {
     public class documentService
     {
         //DevFix 20200910 0727 เพิ่มแนบ link Ebiz ด้วย Link ไปหน้า login 
         //http://tbkc-dapps-05.thaioil.localnet/Ebiz2/authen.aspx?page=/main/request/edit/###/i
-        string LinkLogin = System.Configuration.ConfigurationManager.AppSettings["LinkLogin"].ToString();
+        //String LinkLogin = System.Configuration.ConfigurationManager.AppSettings["LinkLogin"].ToString();
+        string LinkLogin = configApp.GetStringFromAppSettings("LinkLogin") ?? "";
 
         //DevFix 20211004 0000 เพิ่มแนบ link Ebiz Phase2  
         //http://tbkc-dapps-05.thaioil.localnet/Ebiz2/master/###/travelerhistory
-        string LinkLoginPhase2 = System.Configuration.ConfigurationManager.AppSettings["LinkLoginPhase2"].ToString();
-
+        //String LinkLoginPhase2 = System.Configuration.ConfigurationManager.AppSettings["LinkLoginPhase2"].ToString();
+        string LinkLoginPhase2 = configApp.GetStringFromAppSettings("LinkLoginPhase2") ?? "";
 
         #region auwat 20221026 1435 เพิ่มเก็บ log การส่ง mail => เนื่องจากมีกรณที่กดปุ่มแล้ว mail ไม่ไป
         private void write_log_mail(string step, string data_log)
@@ -42,11 +44,211 @@ namespace top.ebiz.service.Service.Create_trip
         }
         #endregion auwat 20221026 1435 เพิ่มเก็บ log การส่ง mail => เนื่องจากมีกรณที่กดปุ่มแล้ว mail ไม่ไป
 
+        public string mail_group_admin(TOPEBizCreateTripEntities context, string role_type_name)
+        {
+            //??? น่าจะต้องทำเป็น stroe
+            var admin_mail = "";
+            var sql = @" select distinct  user_id, email, role_type
+                        from (
+                        select a.emp_id as user_id, u.email , 'super_admin'  as role_type 
+                         from bz_data_manage a inner join vw_bz_users u on a.emp_id = u.employeeid
+                         where a.super_admin  = 'true' 
+                         union
+                         select a.emp_id as user_id, u.email , 'pmsv_admin'  as role_type 
+                         from bz_data_manage a inner join vw_bz_users u on a.emp_id = u.employeeid
+                         where  pmsv_admin =   'true'  
+                         union
+                         select a.emp_id as user_id, u.email , 'pmdv_admin'  as role_type 
+                         from bz_data_manage a inner join vw_bz_users u on a.emp_id = u.employeeid
+                         where  pmdv_admin =  'true'
+                         union
+                         select a.emp_id as user_id, u.email , 'contact_admin'  as role_type 
+                         from bz_data_manage a inner join vw_bz_users u on a.emp_id = u.employeeid
+                         where   contact_admin  =  'true'
+                         )t where t.role_type = :role_type_name";
+
+            var parameters = new List<OracleParameter>();
+            parameters.Add(context.ConvertTypeParameter("role_type_name", role_type_name, "char"));
+            var adminlistall = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+            if (adminlistall != null && adminlistall?.Count > 0)
+            {
+                admin_mail = string.Join(";", adminlistall.Select(a => a.email));
+            }
+            return admin_mail;
+        }
+
+
+        public void getTelServicesTeamCallCenter(ref string tel_services_team, ref string tel_call_center)
+        {
+            tel_services_team = "";
+            tel_call_center = "";
+            try
+            {
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
+                {
+                    using (var transaction = context.Database.BeginTransaction())
+                    {
+                        var sql = @" SELECT key_value as tel_services_team from bz_config_data where lower(key_name) = lower('tel_services_team') and status = 1";
+                        List<OracleParameter> parameters = new List<OracleParameter>();
+                        var tellist = context.TelephoneModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+                        if (tellist != null && tellist?.Count > 0)
+                        {
+                            try { tel_services_team = tellist[0].tel_services_team; } catch { }
+                        }
+
+                        sql = @" SELECT key_value as tel_call_center from bz_config_data where lower(key_name) = lower('tel_call_center') and status = 1";
+                        parameters = new List<OracleParameter>();
+                        tellist = context.TelephoneModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+                        if (tellist != null && tellist?.Count > 0)
+                        {
+                            try { tel_call_center = tellist[0].tel_call_center; } catch { }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+        }
+        public string get_mail_group_admin(TOPEBizCreateTripEntities context)
+        {
+            string admin_mail = "";
+            var sql = "";
+            var parameters = new List<OracleParameter>();
+
+            try
+            {
+                sql = "SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users WHERE role_id = 1 ";
+                parameters = new List<OracleParameter>();
+                var adminList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                if (adminList != null)
+                {
+                    foreach (var item in adminList)
+                    {
+                        admin_mail += ";" + item.email ?? "";
+                    }
+                    if (admin_mail != "") { admin_mail = ";" + admin_mail.Substring(1); }
+                }
+            }
+            catch { }
+
+            return admin_mail;
+        }
+        public void get_mail_requester_in_doc(TOPEBizCreateTripEntities context, string doc_id
+            , ref string requester_name, ref string requester_mail, ref string on_behalf_of_mail)
+        {
+            requester_mail = "";
+            requester_name = "";
+            on_behalf_of_mail = "";
+
+            var sql = "";
+            var parameters = new List<OracleParameter>();
+
+            try
+            {
+                sql = @" SELECT EMPLOYEEID as user_id,  nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email FROM BZ_USERS b
+                                 WHERE EMPLOYEEID IN ( SELECT DH_CREATE_BY FROM  BZ_DOC_HEAD WHERE DH_CODE = :doc_id )";
+
+                parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                var requesterList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                if (requesterList != null)
+                {
+                    if (requesterList.Count > 0)
+                    {
+                        requester_mail = ";" + requesterList[0].email;
+                        requester_name = requesterList[0].user_name;
+                    }
+                }
+                sql = @" SELECT EMPLOYEEID user_id, EMAIL email FROM BZ_USERS 
+                                 WHERE EMPLOYEEID IN ( SELECT DH_BEHALF_EMP_ID FROM  BZ_DOC_HEAD WHERE DH_CODE = :doc_id)";
+                //var behalfList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
+                parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                var behalfList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+                if (behalfList != null)
+                {
+                    if (behalfList.Count > 0)
+                    {
+                        on_behalf_of_mail = ";" + behalfList[0].email;
+                    }
+                }
+
+
+                sql = @"SELECT EMPLOYEEID user_id, EMAIL email FROM BZ_USERS
+                                     WHERE EMPLOYEEID in (select dh_initiator_empid from bz_doc_head where dh_code = :doc_id)  ";
+                parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                var initial = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+                if (initial != null && initial.Count() > 0)
+                {
+                    on_behalf_of_mail += ";" + initial[0].email;
+                }
+            }
+            catch { }
+
+        }
+
+        public void get_user_role_in_token_login(TOPEBizCreateTripEntities context, string token_login
+            , ref string user_name, ref string user_id, ref string user_role)
+        {
+
+            var sql = "";
+            var parameters = new List<OracleParameter>();
+
+            try
+            {
+                sql = "SELECT a.user_id, to_char(u.ROLE_ID) user_role ";
+                sql += " , nvl(u.ENTITLE,'')||' '||u.ENFIRSTNAME||' '||u.ENLASTNAME user_name,nvl(u.ENTITLE,'')||' '||u.ENFIRSTNAME||' '||u.ENLASTNAME user_display, u.email email ";
+                sql += "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid ";
+                sql += " WHERE a.TOKEN_CODE = :token_login ";
+
+                parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("token_login", token_login, "char"));
+                var login_empid = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+
+                if (login_empid != null && login_empid.Count() > 0)
+                {
+                    user_id = login_empid[0].user_id ?? "";
+                    user_role = login_empid[0].user_role ?? "";
+                    user_name = login_empid[0].user_name ?? "";
+                }
+            }
+            catch { }
+        }
+
+        public string get_role_admin_in_manage(TOPEBizCreateTripEntities context, string user_id, string user_role)
+        {
+            var sql = "";
+            var parameters = new List<OracleParameter>();
+            var user_role_select = user_role ?? "";
+
+            try
+            {
+                sql = @" select emp_id as user_id from bz_data_manage where (pmsv_admin = 'true' or pmdv_admin = 'true') and emp_id = :user_id ";
+                parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("user_id", user_id, "char"));
+                var adminlist = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+                if (adminlist != null)
+                {
+                    //if (adminlist.Count > 0) { user_role = "1"; }
+                    if (adminlist.Count > 0) { user_role_select = "1"; }
+                }
+            }
+            catch { }
+
+            return user_role_select;
+        }
+
         public ResultModel genDocNo(genDocNoModel value)
         {
             var data = new ResultModel();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
@@ -91,7 +293,7 @@ namespace top.ebiz.service.Service.Create_trip
         {
             var data = new ResultModel();
 
-            using (TOPEBizEntities context = new TOPEBizEntities())
+            using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
             {
                 using (var connection = context.Database.GetDbConnection())
                 {
@@ -134,19 +336,18 @@ namespace top.ebiz.service.Service.Create_trip
             bool ret = false;
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
-                {
-                    string sql = "";
-                    sql = @" select case when xcount_all=xcount_approve then (case when xcount_all=xcount_cancel then 2 else 0 end) else 1 end status_value   
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
+                { 
+                    var query = context.AllApproveModelList.FromSqlRaw(
+                        @" select case when xcount_all=xcount_approve then (case when xcount_all=xcount_cancel then 2 else 0 end) else 1 end status_value   
                              from (
                                select  sum(case when a.dta_doc_status in(40,41,42)  then 1 else 0 end) xcount_all
                                , sum(case when a.dta_doc_status in(40,42) then 1 else 0 end) xcount_approve 
                                , sum(case when a.dta_doc_status in(40) then 1 else 0 end) xcount_cancel 
                                from bz_doc_traveler_approver a   
-                               where a.dh_code = '" + doc_id + "' and a.dta_doc_status in(40,41,42)  )t ";
+                               where a.dta_doc_status in(40,41,42) and a.dh_code = :doc_id )t",
+                       context.ConvertTypeParameter("doc_id", doc_id, "char")).FirstOrDefault();
 
-
-                    var query = context.Database.SqlQuery<allApproveModel>(sql).FirstOrDefault();
                     if (query == null)
                         return false;
 
@@ -160,8 +361,7 @@ namespace top.ebiz.service.Service.Create_trip
                         return false; // ยังมีรายการที่ยังไม่ได้ Approver
                     }
 
-
-                    using (DbContextTransaction transaction = context.Database.BeginTransaction())
+                    using (var transaction = context.Database.BeginTransaction())
                     {
                         try
                         {
@@ -173,16 +373,22 @@ namespace top.ebiz.service.Service.Create_trip
 
                             doc_head_search.DH_DOC_STATUS = doc_status;
 
-                            sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate  ";
-                            sql += ", ACTION_STATUS=2 ";
-                            sql += " where dh_code='" + doc_id + "' and EMP_ID='admin' ";
-                            sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                            context.Database.ExecuteSqlCommand(sql);
+                            //string sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate  ";
+                            //sql += ", ACTION_STATUS=2 ";
+                            //sql += " where dh_code='" + doc_id + "' and EMP_ID='admin' ";
+                            //sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
+                            //context.Database.ExecuteSqlCommand(sql);
+                            // คำสั่ง SQL สำหรับการอัปเดต
+                            string sql = "UPDATE BZ_DOC_ACTION SET ACTION_DATE = sysdate, ACTION_STATUS = 2 " +
+                                         "WHERE EMP_ID = 'admin' AND DOC_STATUS = 41 AND ACTION_STATUS = 1 AND dh_code = :doc_id ";
+
+                            // ใช้ ExecuteSqlRaw เพื่อความปลอดภัยและรองรับ EF Core รุ่นใหม่
+                            context.Database.ExecuteSqlRaw(sql, new OracleParameter("doc_id", doc_id));
 
                             context.SaveChanges();
                             transaction.Commit();
 
-                            ret_doc_status = doc_status.ToString();
+                            ret_doc_status = doc_status?.ToString() ?? "";
                             ret = true;
                         }
                         catch (Exception ex)
@@ -203,36 +409,34 @@ namespace top.ebiz.service.Service.Create_trip
         private bool AllApproveLineApprover(string doc_id, ref string ret_doc_status)
         {
             bool ret = false;
-            var sql_query = "";
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
                     string sql = "";
                     //DevFix 20210714 0000 เพิ่มสถานะที่ Line/CAP --> 1:Draft , 2:Pendding , 3:Approve , 4:Revise , 5:Reject  
                     #region เช็คว่าอนุมัติครบหรือไม่ 1 2 4
                     decimal? doc_status = 41;
-                    sql = @"select count(1) as status_value
+
+                    var query = context.AllApproveModelList.FromSqlRaw(
+                        @"select count(1) as status_value
                             from  bz_doc_traveler_approver a
                             where a.dta_action_status in (1,2,4) 
                             and a.dta_type = 1
-                            and a.dh_code =  '" + doc_id + "'  ";
-                    var query = context.Database.SqlQuery<allApproveModel>(sql).FirstOrDefault();
+                            and a.dh_code = :doc_id",
+                        context.ConvertTypeParameter("doc_id", doc_id, "char")).FirstOrDefault();
                     if (query == null) { return false; }
                     if (query.status_value > 0) { return false; } // ยังมีรายการที่ยังไม่ได้ action
 
-                    sql = @" select (
-                                        (select count(1) as status_value from  bz_doc_traveler_approver a where a.dta_type = 1 and a.dh_code =  '" + doc_id + "') - ";
-                    sql += @"           (select count(1) as status_value from  bz_doc_traveler_approver a where a.dta_type = 1 and a.dta_action_status in (5) and a.dh_code =  '" + doc_id + "') ";
-                    sql += @"       ) as status_value  from dual";
-
-                    sql_query = sql;
-                    query = context.Database.SqlQuery<allApproveModel>(sql).FirstOrDefault();
+                    sql = @"exec usp_GetStatusTravelerApprover :doc_id ";
+                    var param_doc_id = context.ConvertTypeParameter("doc_id", doc_id, "char");
+                    query = context.AllApproveModelList.FromSqlRaw(sql, param_doc_id).FirstOrDefault();
+                    if (query == null) { return false; }
                     if (query.status_value == 0) { doc_status = 30; } // Cancel by Line Approver
 
                     #endregion
 
-                    using (DbContextTransaction transaction = context.Database.BeginTransaction())
+                    using (var transaction = context.Database.BeginTransaction())
                     {
                         try
                         {
@@ -246,11 +450,17 @@ namespace top.ebiz.service.Service.Create_trip
                             if (query.status_value > 0) // มี approve ทั้งหมดแล้ว
                             {
                                 //DevFix 20210714 0000 เพิ่มตรวจสอบข้อมูล Status ที่ Line Approve เป็น Reject ทั้งหมด ให้ update ข้อมูล action ของ CAP 
-                                sql = "select distinct dta_appr_empid user_id, dta_travel_empid as user_traverler_id";
-                                sql += " from bz_doc_traveler_approver";
-                                sql += " where dh_code = '" + doc_id + "' and dta_type = 2"; // หา cap 
-                                var capUser = context.Database.SqlQuery<SearchCAP_TraverlerModel>(sql).ToList();
+                                //sql = "select distinct dta_appr_empid user_id, dta_travel_empid as user_traverler_id";
+                                //sql += " from bz_doc_traveler_approver";
+                                //sql += " where dh_code = '" + doc_id + "' and dta_type = 2"; // หา cap 
+                                //var capUser = context.Database.SqlQuery<SearchCAP_TraverlerModel>(sql).ToList();
 
+                                // หา cap 
+                                sql = @" select  distinct dta_appr_empid user_id, dta_travel_empid as user_traverler_id
+                                         from bz_doc_traveler_approver 
+                                         where dta_type = 2 and dh_code = :doc_id ";
+                                param_doc_id = context.ConvertTypeParameter("doc_id", doc_id, "char");
+                                var capUser = context.SearchCAP_TraverlerModelList.FromSqlRaw(sql, param_doc_id).ToList();
                                 if (capUser == null && doc_status == 41)
                                 {
                                     //DevFix 20200901 2323 check ว่ามี CAP หรือไม่ ถ้าไม่ให้ status = complate 
@@ -258,72 +468,158 @@ namespace top.ebiz.service.Service.Create_trip
                                 }
                                 else
                                 {
-                                    foreach (var item in capUser)
+                                    var parameters = new List<OracleParameter>();
+                                    if (capUser?.Count > 0)
                                     {
-                                        sql = "insert into BZ_DOC_ACTION (DA_TOKEN, DH_CODE, DOC_TYPE, DOC_STATUS, EMP_ID, TAB_NO,FROM_EMP_ID,ACTION_STATUS) ";
-                                        sql += " values (";
-                                        sql += " '" + Guid.NewGuid().ToString() + "', '" + doc_id + "', '" + doc_head_search.DH_TYPE + "' ";
-                                        sql += " , 41, '" + item.user_id + "', 4 ";
-                                        sql += " , '" + item.user_traverler_id + "'";
-                                        sql += " , 1) ";
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        foreach (var item in capUser)
+                                        {
+                                            sql = @"INSERT INTO BZ_DOC_ACTION (DA_TOKEN, DH_CODE, DOC_TYPE, DOC_STATUS, EMP_ID, TAB_NO, FROM_EMP_ID, ACTION_STATUS) 
+                                        VALUES (:token, :doc_id, :doc_type, :doc_status, :emp_id, :tab_no, :from_emp_id, :action_status)";
+
+                                            // สร้างพารามิเตอร์โดยใช้ ConvertTypeParameter เพื่อเช็คประเภทข้อมูล
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("token", Guid.NewGuid().ToString(), "char"));
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("doc_type", doc_head_search.DH_TYPE, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("doc_status", 41, "int")); // ส่งค่าเลขตรงนี้
+                                            parameters.Add(context.ConvertTypeParameter("emp_id", item.user_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("tab_no", 4, "int"));       // ค่า tab_no เป็น 4
+                                            parameters.Add(context.ConvertTypeParameter("from_emp_id", item.user_traverler_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("action_status", 1, "int")); // ค่า action_status เป็น 1
+
+                                            // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        }
                                     }
 
-                                    sql = "insert into BZ_DOC_ACTION (DA_TOKEN, DH_CODE, DOC_TYPE, DOC_STATUS, EMP_ID, TAB_NO ) ";
-                                    sql += " values (";
-                                    sql += " '" + Guid.NewGuid().ToString() + "', '" + doc_id + "', '" + doc_head_search.DH_TYPE + "' ";
-                                    sql += " , 41, 'admin', 4 ";
-                                    sql += " ) ";
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    // สร้าง SQL สำหรับการ insert
+                                    string sqlInsert = @"insert into BZ_DOC_ACTION (DA_TOKEN, DH_CODE, DOC_TYPE, DOC_STATUS, EMP_ID, TAB_NO) 
+                                    values (:token, :dh_code, :doc_type, :doc_status, :emp_id, :tab_no)";
 
-                                    //DevFix 20200901 2323 ปรับให้ update all 
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate  ";
-                                    sql += ", ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + doc_id + "'   ";
-                                    sql += " and TAB_NO = 3 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(new OracleParameter("token", Guid.NewGuid().ToString()));
+                                    parameters.Add(new OracleParameter("doc_id", doc_id));
+                                    parameters.Add(new OracleParameter("doc_type", doc_head_search.DH_TYPE));
+                                    parameters.Add(new OracleParameter("doc_status", 41)); // ส่งค่า 41 เป็น int
+                                    parameters.Add(new OracleParameter("emp_id", "admin"));
+                                    parameters.Add(new OracleParameter("tab_no", 4)); // ค่า tab_no เป็น 4
+
+                                    context.Database.ExecuteSqlRaw(sqlInsert, parameters.ToArray());
+
+                                    // สร้าง SQL สำหรับการ update BZ_DOC_ACTION
+                                    string sqlUpdateAction = @"update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_STATUS = 2 where dh_code = :doc_id and TAB_NO = :tab_no and ACTION_STATUS = 1";
+
+                                    // เพิ่มพารามิเตอร์สำหรับคำสั่ง update
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(new OracleParameter("doc_id", doc_id));
+                                    parameters.Add(new OracleParameter("tab_no", 3)); // ค่า tab_no เป็น 3
+
+                                    // Execute คำสั่ง SQL สำหรับการ update BZ_DOC_ACTION
+                                    context.Database.ExecuteSqlRaw(sqlUpdateAction, parameters.ToArray());
 
 
-                                    sql = "update BZ_DOC_TRAVELER_APPROVER set DTA_DOC_STATUS=41 ,DTA_ACTION_STATUS = 2";
-                                    sql += " where dh_code = '" + doc_id + "' and DTA_TYPE = 2  ";
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    // สร้าง SQL สำหรับการ update BZ_DOC_TRAVELER_APPROVER
+                                    string sqlUpdateApprover = @"update BZ_DOC_TRAVELER_APPROVER set DTA_DOC_STATUS = :doc_status, DTA_ACTION_STATUS = :action_status where dh_code = :doc_id and DTA_TYPE = 2";
+
+                                    // เพิ่มพารามิเตอร์สำหรับคำสั่ง update BZ_DOC_TRAVELER_APPROVER
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(new OracleParameter("doc_status", 41)); // ค่า DTA_DOC_STATUS เป็น 41
+                                    parameters.Add(new OracleParameter("action_status", 2)); // ค่า DTA_ACTION_STATUS เป็น 2
+                                    parameters.Add(new OracleParameter("doc_id", doc_id));
+
+                                    // Execute คำสั่ง SQL สำหรับการ update BZ_DOC_TRAVELER_APPROVER
+                                    context.Database.ExecuteSqlRaw(sqlUpdateApprover, parameters.ToArray());
 
                                     ////DevFix 20210714 0000 เพิ่มตรวจสอบข้อมูล Status ที่ Line Approve เป็น Reject ทั้งหมด ให้ update ข้อมูล action ของ CAP  
                                     foreach (var item in capUser)
                                     {
                                         var cap_id = item.user_id;
                                         var traverler_id = item.user_traverler_id;
+
                                         sql = @" select  case when (count(1) - sum(case when dta_action_status = 5 then 1 else 0 end )) = 0 then 'true' else 'false' end type_reject
                                                  from bz_doc_traveler_approver b
-                                                 where  dta_type = 1 and dh_code = '" + doc_id + "'  and dta_travel_empid = '" + traverler_id + "' ";
-                                        var linereject = context.Database.SqlQuery<SearchCAP_TraverlerModel>(sql).FirstOrDefault();
+                                                 where  dta_type = 1 and dh_code = :doc_id and dta_travel_empid = :traverler_id ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(new OracleParameter("doc_id", doc_id));
+                                        parameters.Add(new OracleParameter("traverler_id", traverler_id));
+                                        var linereject = context.SearchCAP_TraverlerModelList.FromSqlRaw(sql, parameters.ToArray()).FirstOrDefault();
                                         if (linereject != null && linereject.type_reject == "true")
                                         {
                                             //DevFix 20210714 0000 เพิ่มสถานะที่ Line/CAP --> 1:Draft , 2:Pendding , 3:Approve , 4:Revise , 5:Reject , 6:Not Active
                                             //ตรวจสอบเพิ่มกรณีที่เป็น traverler 1 คนมีมากกว่า 1 cap ถ้า cap ลำดับแรก reject ไปแล้วไม่ต้องส่งให้คนต่อไป
                                             //ให้ update status 6:Not Active 
 
-                                            sql = @" update bz_doc_traveler_approver a
-                                                 set dta_action_status = 6, dta_appr_status = 'true', dta_doc_status= 40
-                                                 where dta_type = 2 and dh_code = '" + doc_id + "'  and dta_appr_empid = '" + cap_id + "' and dta_travel_empid = '" + traverler_id + "' ";
-                                            context.Database.ExecuteSqlCommand(sql);
+                                            //sql = @" update bz_doc_traveler_approver a
+                                            //     set dta_action_status = 6, dta_appr_status = 'true', dta_doc_status= 40
+                                            //     where dta_type = 2 and dh_code = '" + doc_id + "'  and dta_appr_empid = '" + cap_id + "' and dta_travel_empid = '" + traverler_id + "' ";
+                                            //context.Database.ExecuteSqlCommand(sql);
+
+                                            sql = @"update bz_doc_traveler_approver a
+                                                    set dta_action_status = 6, dta_appr_status = 'true', dta_doc_status= 40
+                                                    where dta_type = 2 and dh_code = :doc_id  and dta_appr_empid = :cap_id and dta_travel_empid = :traverler_id ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("cap_id", cap_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("traverler_id", traverler_id, "char"));
+
+                                            // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
+
+                                            //sql = @" update BZ_DOC_TRAVELER_EXPENSE a
+                                            //         set DTE_CAP_APPR_STATUS = 40
+                                            //         where  DH_CODE = '" + doc_id + "'  and DTE_EMP_ID = '" + traverler_id + "' and DTE_APPR_STATUS = 30 ";
+                                            //context.Database.ExecuteSqlCommand(sql);
+
 
                                             sql = @" update BZ_DOC_TRAVELER_EXPENSE a
                                                      set DTE_CAP_APPR_STATUS = 40
-                                                     where  DH_CODE = '" + doc_id + "'  and DTE_EMP_ID = '" + traverler_id + "' and DTE_APPR_STATUS = 30 ";
-                                            context.Database.ExecuteSqlCommand(sql);
+                                                     where DH_CODE = :doc_id  and DTE_EMP_ID = :traverler_id and DTE_APPR_STATUS = 30 ";
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("traverler_id", traverler_id, "char"));
+
+                                            // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
 
                                             //กรณีที่เป็น approver อื่น
+                                            //sql = @" update BZ_DOC_TRAVELER_EXPENSE a
+                                            //         set DTE_CAP_APPR_STATUS = 40
+                                            //         where (DH_CODE, DTE_EMP_ID) in ( select distinct dh_code, dta_travel_empid from bz_doc_traveler_approver where dta_type = 1 and DTA_ACTION_STATUS = '5'  ) 
+                                            //         and DH_CODE = '" + doc_id + "' and DTE_APPR_STATUS = 30 ";
+                                            //context.Database.ExecuteSqlCommand(sql);
+
                                             sql = @" update BZ_DOC_TRAVELER_EXPENSE a
                                                      set DTE_CAP_APPR_STATUS = 40
                                                      where (DH_CODE, DTE_EMP_ID) in ( select distinct dh_code, dta_travel_empid from bz_doc_traveler_approver where dta_type = 1 and DTA_ACTION_STATUS = '5'  ) 
-                                                     and DH_CODE = '" + doc_id + "' and DTE_APPR_STATUS = 30 ";
-                                            context.Database.ExecuteSqlCommand(sql);
+                                                     and DTE_APPR_STATUS = 30 and DH_CODE = :doc_id";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+
+                                            // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
+
+                                            //sql = @" update BZ_DOC_ACTION a
+                                            //         set action_status = 1
+                                            //         where doc_status = 41 and tab_no = 4 and dh_code = '" + doc_id + "'  and emp_id = '" + cap_id + "' and FROM_EMP_ID = '" + traverler_id + "' ";
+                                            //context.Database.ExecuteSqlCommand(sql);
 
                                             sql = @" update BZ_DOC_ACTION a
                                                      set action_status = 1
-                                                     where doc_status = 41 and tab_no = 4 and dh_code = '" + doc_id + "'  and emp_id = '" + cap_id + "' and FROM_EMP_ID = '" + traverler_id + "' ";
-                                            context.Database.ExecuteSqlCommand(sql);
+                                                     where doc_status = 41 and tab_no = 4 and dh_code = :doc_id  and emp_id = :cap_id and FROM_EMP_ID = :traverler_id ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("cap_id", cap_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("traverler_id", traverler_id, "char"));
+
+                                            // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
 
                                         }
                                     }
@@ -338,29 +634,72 @@ namespace top.ebiz.service.Service.Create_trip
                                         sql = @"  select  case when (count(1) - sum(case when dta_action_status in (3,5) then 1 else 0 end )) = 0 then 'true' else 'false' end type_approve
                                                  ,case when (count(1) - sum(case when dta_action_status = 5 then 1 else 0 end )) = 0 then 'true' else 'false' end type_reject 
                                                  from bz_doc_traveler_approver b  
-                                                 where  dta_type = 1 and dh_code = '" + doc_id + "'  and dta_appr_empid = '" + cap_id + "'  and dta_travel_empid = '" + traverler_id + "' ";
-                                        var lineapprove = context.Database.SqlQuery<SearchCAP_TraverlerModel>(sql).FirstOrDefault();
+                                                 where  dta_type = 1 and dh_code = :doc_id and dta_travel_empid = :traverler_id and dta_appr_empid = :cap_id ";
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(new OracleParameter("doc_id", doc_id));
+                                        parameters.Add(new OracleParameter("traverler_id", traverler_id));
+                                        parameters.Add(new OracleParameter("cap_id", cap_id));
+                                        var lineapprove = context.SearchCAP_TraverlerModelList.FromSqlRaw(sql, parameters.ToArray()).FirstOrDefault();
+
                                         if (lineapprove != null && lineapprove.type_approve == "true")
                                         {
                                             if (lineapprove.type_reject == "true")
                                             {
+                                                //sql = @" update bz_doc_traveler_approver a
+                                                // set dta_action_status =5, dta_appr_status = 'true', dta_doc_status= 42
+                                                // where dta_type = 2 and dh_code = '" + doc_id + "'  and dta_appr_empid = '" + cap_id + "' and dta_travel_empid = '" + traverler_id + "' ";
+                                                //context.Database.ExecuteSqlCommand(sql);
+
                                                 sql = @" update bz_doc_traveler_approver a
                                                  set dta_action_status =5, dta_appr_status = 'true', dta_doc_status= 42
-                                                 where dta_type = 2 and dh_code = '" + doc_id + "'  and dta_appr_empid = '" + cap_id + "' and dta_travel_empid = '" + traverler_id + "' ";
-                                                context.Database.ExecuteSqlCommand(sql);
+                                                 where dta_type = 2 and dh_code = :doc_id  and dta_appr_empid = :cap_id and dta_travel_empid = :traverler_id ";
+
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("cap_id", cap_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("traverler_id", traverler_id, "char"));
+
+                                                // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                                context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                                             }
                                             else
                                             {
+                                                //sql = @" update bz_doc_traveler_approver a
+                                                // set dta_action_status =3, dta_appr_status = 'true', dta_doc_status= 42
+                                                // where dta_type = 2 and dh_code = '" + doc_id + "'  and dta_appr_empid = '" + cap_id + "' and dta_travel_empid = '" + traverler_id + "' ";
+                                                //context.Database.ExecuteSqlCommand(sql);
+
                                                 sql = @" update bz_doc_traveler_approver a
                                                  set dta_action_status =3, dta_appr_status = 'true', dta_doc_status= 42
-                                                 where dta_type = 2 and dh_code = '" + doc_id + "'  and dta_appr_empid = '" + cap_id + "' and dta_travel_empid = '" + traverler_id + "' ";
-                                                context.Database.ExecuteSqlCommand(sql);
+                                                 where dta_type = 2 and dh_code = :doc_id  and dta_appr_empid = :cap_id and dta_travel_empid = :traverler_id ";
+
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("cap_id", cap_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("traverler_id", traverler_id, "char"));
+
+                                                // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                                context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                                             }
+
+                                            //sql = @" update BZ_DOC_ACTION a
+                                            //         set action_status = 2
+                                            //         where doc_status = 41 and tab_no = 4 and dh_code = '" + doc_id + "'  and emp_id = '" + cap_id + "' and from_emp_id = '" + traverler_id + "' ";
+                                            //context.Database.ExecuteSqlCommand(sql);
 
                                             sql = @" update BZ_DOC_ACTION a
                                                      set action_status = 2
-                                                     where doc_status = 41 and tab_no = 4 and dh_code = '" + doc_id + "'  and emp_id = '" + cap_id + "' and from_emp_id = '" + traverler_id + "' ";
-                                            context.Database.ExecuteSqlCommand(sql);
+                                                     where doc_status = 41 and tab_no = 4 and dh_code = :doc_id  and emp_id = :cap_id and from_emp_id = :traverler_id ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("cap_id", cap_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("traverler_id", traverler_id, "char"));
+
+                                            // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
 
                                         }
                                     }
@@ -369,11 +708,16 @@ namespace top.ebiz.service.Service.Create_trip
 
                             }
 
-                            context.Database.ExecuteSqlCommand(sql);
+                            ////DevFix 20241017 0000 ???ไม่แน่ใจใช้ส่วนไหน
+                            //context.Database.ExecuteSqlCommand(sql);
+
                             context.SaveChanges();
                             transaction.Commit();
 
-                            query = context.Database.SqlQuery<allApproveModel>(sql_query).FirstOrDefault();
+                            sql = @"exec usp_GetStatusTravelerApprover :doc_id ";
+                            param_doc_id = context.ConvertTypeParameter("doc_id", doc_id, "char");
+                            query = context.AllApproveModelList.FromSqlRaw(sql, param_doc_id).FirstOrDefault();
+                            if (query == null) { return false; }
                             if (query.status_value > 0) // มี approve ทั้งหมดแล้ว
                             {
                                 //DevFix 20210802 0000 เพิ่มตรวจสอบข้อมูล Status ที่ Line Approve เป็น Apprve ทั้งหมด ให้ update ข้อมูล action ของ CAP และ update status head  
@@ -400,6 +744,8 @@ namespace top.ebiz.service.Service.Create_trip
 
         public ResultModel submitFlow1(DocModel value)
         {
+            var parameters = new List<OracleParameter>();
+
             int iResult = -1;
             decimal? decimalNull = null;
             bool newDocNo = false;
@@ -410,6 +756,8 @@ namespace top.ebiz.service.Service.Create_trip
             int tab_no = 1;
 
             var pf_doc_id = "";
+            var doc_id = value.id ?? "";
+            var token_login = value.token_login ?? "";
 
             //DevFix 20210527 0000 เพิ่มข้อมูล ประเภทใบงานเป็น 1:flow, 2:not flow, 3:training เก็บไว้ที่  BZ_DOC_HEAD.DH_TYPE_FLOW
             bool type_flow = true;
@@ -441,7 +789,11 @@ namespace top.ebiz.service.Service.Create_trip
                     doc_status = 10;
                 }
 
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                var Tel_Services_Team = "";
+                var Tel_Call_Center = "";
+                getTelServicesTeamCallCenter(ref Tel_Services_Team, ref Tel_Call_Center);
+
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
 
                     var empList = from emp in context.BZ_USERS
@@ -464,33 +816,50 @@ namespace top.ebiz.service.Service.Create_trip
                             }
                         }
                     }
-
-                    using (DbContextTransaction transaction = context.Database.BeginTransaction())
+                    string sql = "";
+                    using (var transaction = context.Database.BeginTransaction())
                     {
-                        var User = new List<SearchUserModel>();
-                        string sql = "SELECT  USER_NAME, user_id ";
-                        sql += "FROM bz_login_token WHERE TOKEN_CODE ='" + value.token_login + "' ";
-                        User = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                        //var User = new List<SearchUserModel>();
+                        //string sql = "SELECT  USER_NAME, user_id ";
+                        //sql += "FROM bz_login_token WHERE TOKEN_CODE ='" + value.token_login + "' ";
+                        //User = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
+                        sql = @"SELECT  USER_NAME, USER_ID FROM bz_login_token WHERE TOKEN_CODE = :token_login ";
+                        var param_token_login = context.ConvertTypeParameter("token_login", token_login, "char");
+                        var User = context.SearchUserModelList.FromSqlRaw(sql, param_token_login).ToList();
                         if (User != null && User.Count() > 0)
                         {
                             user_id = User[0].user_id ?? "";
                         }
 
-                        sql = "SELECT    EMPLOYEEID user_id, EMAIL email ";
-                        sql += "FROM bz_users WHERE role_id = 1 ";
-                        var adminList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                        //sql = "SELECT    EMPLOYEEID user_id, EMAIL email FROM bz_users WHERE role_id = 1 ";
+                        //var adminList = context.Database.SqlQuery<SearchUserModel>(sql).ToList(); 
+                        var adminList = context.SearchUserModelList.FromSqlRaw(sql, new OracleParameter()).ToList();
 
-                        sql = "SELECT    io, COST_CENTER_RESP cc ";
-                        sql += "FROM BZ_MASTER_IO ";
-                        var ccio = context.Database.SqlQuery<costcenter_io>(sql).ToList();
+                        sql = @"SELECT io, COST_CENTER_RESP cc FROM BZ_MASTER_IO ";
+                        //var ccio = context.Database.SqlQuery<costcenter_io>(sql).ToList();
+                        var ccio = context.CostcenterIOList.FromSqlRaw(sql, new OracleParameter()).ToList();
 
                         #region DevFix 20200909 1606 กรณที่กรอกข้อมูล GL Account ใหม่ที่ไม่ได้อยู่ใน master ให้เพิ่มเข้าระบบ 
                         sql = " select GL_NO from BZ_MASTER_GL order by GL_NO ";
-                        var ccgl_account = context.Database.SqlQuery<gl_account>(sql).ToList();
+                        //var ccgl_account = context.Database.SqlQuery<gl_account>(sql).ToList();
+                        var ccgl_account = context.GLAccountList.FromSqlRaw(sql, new OracleParameter()).ToList();
                         #endregion DevFix 20200909 1606 กรณที่กรอกข้อมูล GL Account ใหม่ที่ไม่ได้อยู่ใน master ให้เพิ่มเข้าระบบ
 
 
                         #region DevFix 20200911 0000 ส่งเมลแจ้งคนที่ On behalf of 
+                        //sql = @"SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users ";
+                        //if (value.behalf.emp_id == "")
+                        //{
+                        //    sql += " WHERE 1=2";
+                        //}
+                        //else
+                        //{
+                        //    sql += " WHERE EMPLOYEEID =" + value.behalf.emp_id;
+                        //}
+                        //var behalfList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
+                        var param_list = new OracleParameter();
                         sql = @"SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users ";
                         if (value.behalf.emp_id == "")
                         {
@@ -498,9 +867,11 @@ namespace top.ebiz.service.Service.Create_trip
                         }
                         else
                         {
-                            sql += " WHERE EMPLOYEEID =" + value.behalf.emp_id;
+                            sql += " WHERE EMPLOYEEID = :emp_id";
+                            param_list = context.ConvertTypeParameter("emp_id", value.behalf.emp_id, "char");
                         }
-                        var behalfList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                        var behalfList = context.SearchUserModelList.FromSqlRaw(sql, param_list).ToList();
+
                         string on_behalf_of_mail = "";
                         if (behalfList != null)
                         {
@@ -510,20 +881,6 @@ namespace top.ebiz.service.Service.Create_trip
                             }
                         }
                         #endregion DevFix 20200911 0000 ส่งเมลแจ้งคนที่ On behalf of 
-
-
-                        #region DevFix 20200911 0000 
-                        var Tel_Services_Team = "";
-                        var Tel_Call_Center = "";
-                        sql = @" SELECT key_value as tel_services_team
-                                 from bz_config_data where lower(key_name) = lower('tel_services_team') and status = 1";
-                        var tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
-                        try { Tel_Services_Team = tellist[0].tel_services_team; } catch { }
-                        sql = @" SELECT key_value as tel_call_center 
-                                 from bz_config_data where lower(key_name) = lower('tel_call_center') and status = 1";
-                        tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
-                        try { Tel_Call_Center = tellist[0].tel_call_center; } catch { }
-                        #endregion DevFix 20200911 0000 
 
                         try
                         {
@@ -644,13 +1001,20 @@ namespace top.ebiz.service.Service.Create_trip
                                 //DevFix 20210527 0000 เพิ่มข้อมูล ประเภทใบงานเป็น 1:flow, 2:not flow, 3:training เก็บไว้ที่  BZ_DOC_HEAD.DH_TYPE_FLOW 
                                 if (value.action.type == "1" || value.action.type == "5")
                                 {
-                                    //doc_head_search.DH_TYPE_FLOW = value.type_flow ?? "";
-                                    var sdh_code = value.id;
+                                    //doc_head_search.DH_TYPE_FLOW = value.type_flow ?? ""; 
                                     var stype_flow = value.type_flow ?? "";
-                                    var sqlstr_update = "UPDATE BZ_DOC_HEAD SET DH_TYPE_FLOW = " + stype_flow + " WHERE DH_CODE = '" + sdh_code + "'";
-                                    //context.Database.ExecuteSqlCommand(sqlstr_update);
 
-                                    context.Database.ExecuteSqlCommand("UPDATE BZ_DOC_HEAD SET DH_TYPE_FLOW = " + (value.type_flow ?? "") + " WHERE DH_CODE = '" + value.id + "'");
+                                    //context.Database.ExecuteSqlCommand("UPDATE BZ_DOC_HEAD SET DH_TYPE_FLOW = " + (value.type_flow ?? "") + " WHERE DH_CODE = '" + value.id + "'");
+
+                                    sql = @"UPDATE BZ_DOC_HEAD SET DH_TYPE_FLOW = :stype_flow WHERE DH_CODE = :doc_id ";
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("stype_flow", stype_flow, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+
+                                    // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
+
                                 }
 
                             }
@@ -659,7 +1023,14 @@ namespace top.ebiz.service.Service.Create_trip
 
                             #region "#### BZ_DOC_TRAVEL_TYPE ####"
 
-                            context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_TRAVEL_TYPE WHERE DH_CODE = '" + value.id + "'");
+                            //context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_TRAVEL_TYPE WHERE DH_CODE = '" + value.id + "'");
+                            sql = @"DELETE FROM BZ_DOC_TRAVEL_TYPE WHERE DH_CODE = :doc_id";
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+
+                            // Execute SQL โดยส่งพารามิเตอร์ที่แปลงแล้วเข้าไป
+                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                             if ((value.type_of_travel.meeting ?? "") == "true")
                             {
                                 context.BZ_DOC_TRAVEL_TYPE.Add(new BZ_DOC_TRAVEL_TYPE
@@ -729,7 +1100,11 @@ namespace top.ebiz.service.Service.Create_trip
 
                             #region "#### BZ_DOC_CONTIENT ####"
 
-                            context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_CONTIENT WHERE DH_CODE = '" + value.id + "'");
+                            //context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_CONTIENT WHERE DH_CODE = '" + value.id + "'");
+                            sql = @"DELETE FROM BZ_DOC_CONTIENT WHERE DH_CODE = :doc_id";
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                             if (!string.IsNullOrEmpty(value.type))
                             {
                                 if (value.type.ToString() == "local")
@@ -757,7 +1132,12 @@ namespace top.ebiz.service.Service.Create_trip
 
                             #region "### BZ_DOC_COUNTRY ####"
 
-                            context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_COUNTRY WHERE DH_CODE = '" + value.id + "'");
+                            //context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_COUNTRY WHERE DH_CODE = '" + value.id + "'");
+                            sql = @"DELETE FROM BZ_DOC_COUNTRY WHERE DH_CODE = :doc_id";
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                             if (value.type.ToString() == "local")
                             {
                                 context.BZ_DOC_COUNTRY.Add(new BZ_DOC_COUNTRY
@@ -785,7 +1165,12 @@ namespace top.ebiz.service.Service.Create_trip
 
                             #region "#### BZ_DOC_PROVINCE ####"
 
-                            context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_PROVINCE WHERE DH_CODE = '" + value.id + "'");
+                            //context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_PROVINCE WHERE DH_CODE = '" + value.id + "'");
+                            sql = @"DELETE FROM BZ_DOC_PROVINCE WHERE DH_CODE = :doc_id";
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                             foreach (var c in value.province)
                             {
                                 context.BZ_DOC_PROVINCE.Add(new BZ_DOC_PROVINCE
@@ -937,11 +1322,26 @@ namespace top.ebiz.service.Service.Create_trip
                                     var iocheck = ccio.Where(p => p.io.ToUpper().Equals(c.order.ToUpper().Trim()))?.ToList();
                                     if (iocheck == null || iocheck.Count() == 0)
                                     {
-                                        //sql = "insert into BZ_MASTER_IO (IO, COST_CENTER_RESP) values ('" + c.order.ToUpper().Trim().Replace("'", "''") + "', '" + retText(c.cost ?? "").Replace("'", "''") + "')";
-                                        sql = "insert into BZ_MASTER_IO (IO, COST_CENTER_RESP) ";
-                                        sql += " select '" + c.order.ToUpper().Trim().Replace("'", "''") + "', '" + retText(c.cost ?? "").Replace("'", "''") + "' from dual ";
-                                        sql += " where not exists(select * from BZ_MASTER_IO where (upper(IO) = '" + c.order.ToUpper().Trim().Replace("'", "''") + "')) ";
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        //sql = "insert into BZ_MASTER_IO (IO, COST_CENTER_RESP) ";
+                                        //sql += " select '" + c.order.ToUpper().Trim().Replace("'", "''") + "', '" + retText(c.cost ?? "").Replace("'", "''") + "' from dual ";
+                                        //sql += " where not exists(select * from BZ_MASTER_IO where (upper(IO) = '" + c.order.ToUpper().Trim().Replace("'", "''") + "')) ";
+                                        //context.Database.ExecuteSqlCommand(sql);
+
+                                        // กำหนดค่าที่ต้องการให้กับฟิลด์
+                                        var field_order = c.order.ToUpper().Trim();
+                                        var field_cost = retText(c.cost ?? "");
+
+                                        // สร้าง SQL ที่ใช้พารามิเตอร์ (Parameterized query)
+                                        sql = @"INSERT INTO BZ_MASTER_IO (IO, COST_CENTER_RESP)  SELECT :field_order, :field_cost FROM dual WHERE NOT EXISTS (  SELECT * FROM BZ_MASTER_IO WHERE UPPER(IO) = :field_order )";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("field_order", field_order, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("field_cost", field_cost, "char"));
+
+                                        // เรียกใช้คำสั่ง SQL ผ่าน FromSqlRaw หรือ ExecuteSqlRaw
+                                        context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
+
                                     }
                                 }
 
@@ -955,17 +1355,27 @@ namespace top.ebiz.service.Service.Create_trip
                                     if (gl_accountcheck == null || gl_accountcheck.Count() == 0)
                                     {
                                         //select GL_NO,GL_DESC,USERSTATUS,TOKEN from  BZ_MASTER_GL
+                                        //sql = "insert into BZ_MASTER_GL (GL_NO,USERSTATUS) ";
+                                        //sql += " select '" + gl_account_def + "',1 AS USERSTATUS from dual ";
+                                        //sql += " where upper('" + gl_account_def + "') not in (select upper(GL_NO) as GL_NO  from BZ_MASTER_GL where (upper(GL_NO) = '" + gl_account_def + "')) ";
+                                        //context.Database.ExecuteSqlCommand(sql);
+
                                         sql = "insert into BZ_MASTER_GL (GL_NO,USERSTATUS) ";
-                                        sql += " select '" + gl_account_def + "',1 AS USERSTATUS from dual ";
-                                        sql += " where upper('" + gl_account_def + "') not in (select upper(GL_NO) as GL_NO  from BZ_MASTER_GL where (upper(GL_NO) = '" + gl_account_def + "')) ";
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        sql += " select :gl_account_def, 1 AS USERSTATUS from dual ";
+                                        sql += " where upper(:gl_account_def) not in (select upper(GL_NO) as GL_NO  from BZ_MASTER_GL where (upper(GL_NO) = :gl_account_def )) ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("gl_account_def", gl_account_def, "char"));
+
+                                        // เรียกใช้คำสั่ง SQL ผ่าน FromSqlRaw หรือ ExecuteSqlRaw
+                                        context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                     }
                                 }
                                 #endregion DevFix 20200909 1606 กรณที่กรอกข้อมูล GL Account ใหม่ที่ไม่ได้อยู่ใน master ให้เพิ่มเข้าระบบ
 
                             }
 
-                            var row_delete = traveler_expen.Where(p => p.DTE_TOKEN_UPDATE != token_update).ToList();
+                            var row_delete = traveler_expen?.Where(p => p.DTE_TOKEN_UPDATE != token_update).ToList();
                             if (row_delete != null && row_delete.Count() > 0)
                             {
                                 foreach (var d in row_delete)
@@ -1044,13 +1454,20 @@ namespace top.ebiz.service.Service.Create_trip
                                     UPDATED_DATE = DateTime.Now,
                                 });
 
-                                sql = "update BZ_DOC_ACTION set ACTION_STATUS=2, UPDATED_DATE=sysdate ";
-                                sql += " where DH_CODE='" + value.id + "' and TAB_NO=1 and ACTION_STATUS=1 ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                //sql = "update BZ_DOC_ACTION set ACTION_STATUS=2, UPDATED_DATE=sysdate ";
+                                //sql += " where DH_CODE='" + value.id + "' and TAB_NO=1 and ACTION_STATUS=1 ";
+                                //context.Database.ExecuteSqlCommand(sql);
+
+                                sql = @"update BZ_DOC_ACTION set ACTION_STATUS=2, UPDATED_DATE=sysdate where DH_CODE= :doc_id and TAB_NO=1 and ACTION_STATUS=1 ";
+
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+
+                                // เรียกใช้คำสั่ง SQL ผ่าน FromSqlRaw หรือ ExecuteSqlRaw
+                                context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
 
                                 #endregion
-
-
 
                                 #region "BZ_DOC_TRAVELER_APPROVER"
 
@@ -1059,7 +1476,12 @@ namespace top.ebiz.service.Service.Create_trip
                                 //DevFix 20211116 0000 เครียร์ข้อมูล approver ใหม่ old_doc_status < 50
                                 if (old_doc_status < 30 || old_doc_status < 50)
                                 {
-                                    context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_TRAVELER_APPROVER WHERE DH_CODE = '" + value.id + "'");
+                                    //context.Database.ExecuteSqlCommand("DELETE FROM BZ_DOC_TRAVELER_APPROVER WHERE DH_CODE = '" + value.id + "'");
+                                    sql = @"DELETE FROM BZ_DOC_TRAVELER_APPROVER WHERE DH_CODE = :doc_id";
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                                     var qApprove = from t in value.summary_table
                                                    join e in empList on t.emp_id equals e.EMPLOYEEID
                                                    join e2 in empList on e.MANAGER_EMPID equals e2.EMPLOYEEID
@@ -1099,17 +1521,31 @@ namespace top.ebiz.service.Service.Create_trip
                                     if (old_doc_status > 30)
                                     {
                                         //DevFix 20211116 0000 เครียร์ข้อมูล approver ใหม่
-                                        sql = "DELETE from BZ_DOC_TRAVELER_APPROVER where DH_CODE='" + value.id + "' ";
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        //sql = "DELETE from BZ_DOC_TRAVELER_APPROVER where DH_CODE='" + value.id + "' ";
+                                        //context.Database.ExecuteSqlCommand(sql);
+                                        sql = "delete from BZ_DOC_TRAVELER_APPROVER where DH_CODE= :doc_id ";
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
 
                                         //DevFix 20211116 0000 เครียร์ข้อมูล action เดิมที่ค้างจาก tab 4
-                                        sql = "update BZ_DOC_ACTION set ACTION_STATUS=2, UPDATED_DATE=sysdate ";
-                                        sql += " where DH_CODE='" + value.id + "' and TAB_NO in (3,4) and ACTION_STATUS=1 ";
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        //sql = "update BZ_DOC_ACTION set ACTION_STATUS=2, UPDATED_DATE=sysdate ";
+                                        //sql += " where DH_CODE='" + value.id + "' and TAB_NO in (3,4) and ACTION_STATUS=1 ";
+                                        //context.Database.ExecuteSqlCommand(sql);
+                                        sql = @"update BZ_DOC_ACTION set ACTION_STATUS=2, UPDATED_DATE=sysdate where DH_CODE= :doc_id and TAB_NO in (3,4) and ACTION_STATUS=1 ";
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
 
                                         //DevFix 20211116 0000 เครียร์ข้อมูล approver ใหม่
-                                        sql = "update BZ_DOC_HEAD set DH_DOC_STATUS = '21' where DH_CODE='" + value.id + "' ";
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        //sql = "update BZ_DOC_HEAD set DH_DOC_STATUS = '21' where DH_CODE='" + value.id + "' ";
+                                        //context.Database.ExecuteSqlCommand(sql);
+                                        sql = "update BZ_DOC_HEAD set DH_DOC_STATUS = '21' where DH_CODE= :doc_id ";
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                                     }
 
                                 }
@@ -1120,9 +1556,12 @@ namespace top.ebiz.service.Service.Create_trip
                             }
                             else if (value.action.type == "1") // save 
                             {
-                                sql = "delete from BZ_DOC_ACTION  ";
-                                sql += " where DH_CODE='" + value.id + "' and DOC_STATUS = 11 and ACTION_STATUS=1 ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                //sql = "delete from BZ_DOC_ACTION where DH_CODE='" + value.id + "' and DOC_STATUS = 11 and ACTION_STATUS=1 ";
+                                //context.Database.ExecuteSqlCommand(sql);
+                                sql = "delete from BZ_DOC_ACTION where DH_CODE= :doc_id and DOC_STATUS = 11 and ACTION_STATUS=1 ";
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
 
                                 context.BZ_DOC_ACTION.Add(new BZ_DOC_ACTION
                                 {
@@ -1130,7 +1569,7 @@ namespace top.ebiz.service.Service.Create_trip
                                     DH_CODE = value.id,
                                     DOC_TYPE = value.type,
                                     DOC_STATUS = 11,
-                                    EMP_ID = newDocNo == true ? user_id : doc_head_search.DH_CREATE_BY,
+                                    EMP_ID = newDocNo == true ? user_id : doc_head_search?.DH_CREATE_BY,
                                     TAB_NO = 1,
                                     ACTION_STATUS = 1,
                                     CREATED_DATE = DateTime.Now,
@@ -1161,21 +1600,21 @@ namespace top.ebiz.service.Service.Create_trip
                                 data.status = "S";
                                 data.message = "";
                             }
-                            catch (System.Data.Entity.Validation.DbEntityValidationException e)
+                            //catch (System.Data.Entity.Validation.DbEntityValidationException e)
+                            catch (Exception e)
                             {
-                                string xmessage = "";
-                                foreach (var eve in e.EntityValidationErrors)
-                                {
-                                    Console.WriteLine("Entity of type \"{0}\" in state \"{1}\" has the following validation errors:",
-                                        eve.Entry.Entity.GetType().Name, eve.Entry.State);
-                                    foreach (var ve in eve.ValidationErrors)
-                                    {
-                                        Console.WriteLine("- Property: \"{0}\", Error: \"{1}\"",
-                                            ve.PropertyName, ve.ErrorMessage);
-                                        xmessage = ve.ErrorMessage;
-                                    }
-                                }
-
+                                string xmessage = e.Message.ToString();
+                                //foreach (var eve in e.EntityValidationErrors)
+                                //{
+                                //    Console.WriteLine("Entity of type \"{0}\" in state \"{1}\" has the following validation errors:",
+                                //        eve.Entry.Entity.GetType().Name, eve.Entry.State);
+                                //    foreach (var ve in eve.ValidationErrors)
+                                //    {
+                                //        Console.WriteLine("- Property: \"{0}\", Error: \"{1}\"",
+                                //            ve.PropertyName, ve.ErrorMessage);
+                                //        xmessage = ve.ErrorMessage;
+                                //    }
+                                //} 
                                 data.status = "E";
                                 data.message = xmessage;
 
@@ -1222,15 +1661,25 @@ namespace top.ebiz.service.Service.Create_trip
 
                                             //กรณีที่เป็น pmdv admin, pmsv_admin
                                             admin_mail += mail_group_admin(context, "pmsv_admin");
-                                            if (value.id.IndexOf("T") > -1)
+                                            if (doc_id.IndexOf("T") > -1)
                                             {
                                                 admin_mail += mail_group_admin(context, "pmdv_admin");
                                             }
 
                                             //DevFix 20210813 0000 หลังจาก Requester กด Submit แล้ว E-mail วิ่งไปหา Initiator แต่ไม่ CC: Requester & Traveler 
-                                            sql = @" SELECT distinct EMPLOYEEID as user_id,  nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email FROM BZ_USERS b
-                                                     WHERE EMPLOYEEID IN ( SELECT DH_CREATE_BY FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.id + "')";
-                                            var requesterList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                            //sql = @" SELECT distinct EMPLOYEEID as user_id,  nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email FROM BZ_USERS b
+                                            //         WHERE EMPLOYEEID IN ( SELECT DH_CREATE_BY FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.id + "')";
+                                            //var requesterList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                            sql = @" SELECT distinct EMPLOYEEID as user_id,  nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email
+                                                    FROM BZ_USERS b 
+                                                    INNER JOIN BZ_DOC_HEAD h on b.EMPLOYEEID = h.DH_CREATE_BY
+                                                    WHERE DH_CODE = :doc_id";
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var requesterList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                                             if (requesterList != null)
                                             {
                                                 if (requesterList.Count > 0)
@@ -1241,14 +1690,23 @@ namespace top.ebiz.service.Service.Create_trip
                                             }
 
                                             //DevFix 20210813 0000 เพิ่ม email เพื่อนำไปใช้ตอน cc
+                                            //sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2  
+                                            //         , b.employeeid as name3, b.orgname as name4
+                                            //         from BZ_DOC_TRAVELER_EXPENSE a left join bz_users b on a.DTE_EMP_ID = b.employeeid 
+                                            //         left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
+                                            //         on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id 
+                                            //         where a.dh_code = '" + value.id + "' and nvl(a.dte_status,0) <> 0  order by s.id "; 
+                                            //var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
                                             sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2  
                                                      , b.employeeid as name3, b.orgname as name4
                                                      from BZ_DOC_TRAVELER_EXPENSE a left join bz_users b on a.DTE_EMP_ID = b.employeeid 
                                                      left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
                                                      on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id 
-                                                     where a.dh_code = '" + value.id + "' and nvl(a.dte_status,0) <> 0  order by s.id ";
+                                                     where a.dh_code = :doc_id and nvl(a.dte_status,0) <> 0  order by s.id ";
 
-                                            var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                             if (tempTravel != null)
                                             {
                                                 foreach (var item in tempTravel)
@@ -1265,9 +1723,17 @@ namespace top.ebiz.service.Service.Create_trip
                                                 var initial_mail = "";
                                                 try
                                                 {
+                                                    //sql = "SELECT EMPLOYEEID user_id, EMAIL email ";
+                                                    //sql += "FROM bz_users WHERE EMPLOYEEID = '" + value.initiator.emp_id + "' ";
+                                                    //var initial = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
                                                     sql = "SELECT EMPLOYEEID user_id, EMAIL email ";
-                                                    sql += "FROM bz_users WHERE EMPLOYEEID = '" + value.initiator.emp_id + "' ";
-                                                    var initial = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                                    sql += "FROM bz_users WHERE EMPLOYEEID = :initiator_emp_id_select ";
+                                                    var initiator_emp_id_select = value.initiator.emp_id ?? "";
+                                                    parameters = new List<OracleParameter>();
+                                                    parameters.Add(context.ConvertTypeParameter("initiator_emp_id_select", initiator_emp_id_select, "char"));
+                                                    var initial = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                                     if (initial != null && initial.Count() > 0)
                                                     {
                                                         initial_mail = ";" + initial[0].email;
@@ -1291,10 +1757,17 @@ namespace top.ebiz.service.Service.Create_trip
                                             }
                                             else
                                             {
+                                                var user_initiator_emp_id = value.initiator.emp_id ?? "";
                                                 var user_initiator_display = "";
-                                                sql = "SELECT  nvl(ENTITLE, '') || ' ' || ENFIRSTNAME || ' ' || ENLASTNAME as user_name, EMPLOYEEID user_id, EMAIL email ";
-                                                sql += "FROM bz_users WHERE EMPLOYEEID = '" + value.initiator.emp_id + "' ";
-                                                var initial = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                                //sql = "SELECT  nvl(ENTITLE, '') || ' ' || ENFIRSTNAME || ' ' || ENLASTNAME as user_name, EMPLOYEEID user_id, EMAIL email ";
+                                                //sql += "FROM bz_users WHERE EMPLOYEEID = '" + value.initiator.emp_id + "' ";
+                                                //var initial = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                                sql = @" SELECT  nvl(ENTITLE, '') || ' ' || ENFIRSTNAME || ' ' || ENLASTNAME as user_name, EMPLOYEEID user_id, EMAIL email ";
+                                                sql += " FROM bz_users WHERE EMPLOYEEID = :user_initiator_emp_id ";
+
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("user_initiator_emp_id", user_initiator_emp_id, "char"));
+                                                var initial = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                                 if (initial != null && initial.Count() > 0)
                                                 {
                                                     dataMail.mail_to = initial[0].email ?? "";
@@ -1320,12 +1793,17 @@ namespace top.ebiz.service.Service.Create_trip
                                             sBusinessDate = "Date : " + dateFromTo(value.business_date.start, value.business_date.stop) ?? "";
                                             if (value.type == "local" || value.type == "localtraining")
                                             {
-                                                //DevFix 20210330 1502 แก้ไข Location 
-                                                //sql = @"select distinct  e.PV_NAME as name1, a.CITY_TEXT as name2  
-                                                //from BZ_DOC_TRAVELER_EXPENSE a left join bz_users b on a.DTE_EMP_ID = b.employeeid  
-                                                //left join BZ_MASTER_CONTINENT c on a.CTN_ID = c.CTN_ID   
-                                                //left join BZ_MASTER_PROVINCE e on a.PV_ID = e.PV_ID 
-                                                //where a.DH_CODE = '" + value.id + "' and a.dte_status = 1 ";
+                                                //DevFix 20210330 1502 แก้ไข Location  
+                                                //sql = @" select distinct to_char(s.id) as id, e.PV_NAME as name1, a.CITY_TEXT as name2   
+                                                //         from BZ_DOC_TRAVELER_EXPENSE a 
+                                                //         left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
+                                                //         ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
+                                                //         and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
+                                                //         left join bz_users b on a.DTE_EMP_ID = b.employeeid  
+                                                //         left join BZ_MASTER_CONTINENT c on a.CTN_ID = c.CTN_ID   
+                                                //         left join BZ_MASTER_PROVINCE e on a.PV_ID = e.PV_ID 
+                                                //         where a.DH_CODE = '" + value.id + "' and a.dte_status = 1 order by s.id";
+                                                //var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
                                                 sql = @" select distinct to_char(s.id) as id, e.PV_NAME as name1, a.CITY_TEXT as name2   
                                                          from BZ_DOC_TRAVELER_EXPENSE a 
                                                          left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
@@ -1334,8 +1812,10 @@ namespace top.ebiz.service.Service.Create_trip
                                                          left join bz_users b on a.DTE_EMP_ID = b.employeeid  
                                                          left join BZ_MASTER_CONTINENT c on a.CTN_ID = c.CTN_ID   
                                                          left join BZ_MASTER_PROVINCE e on a.PV_ID = e.PV_ID 
-                                                         where a.DH_CODE = '" + value.id + "' and a.dte_status = 1 order by s.id";
-                                                var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                         where a.DH_CODE = :doc_id and a.dte_status = 1 order by s.id";
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                                 if (temp != null && temp.Count() > 0)
                                                 {
                                                     //DevFix 20210816 0000 กรณีที่มีมากกว่า 1 Location
@@ -1357,21 +1837,26 @@ namespace top.ebiz.service.Service.Create_trip
                                             }
                                             else
                                             {
+                                                //DevFix 20210819 0000  แก้ไขเทส case เลือกไป 2 ประเทศ แต่ในอีเมล์แสดงแค่ประเทศเดียว ?ต้องแสดงทั้งหมด 
+                                                //sql = @" select distinct to_char(s.id) as id, b.ct_name name1, c.ctn_name name2 
+                                                //         from BZ_DOC_COUNTRY a 
+                                                //         left join (select min(dte_id) as id, dh_code, ct_id from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ct_id) s on a.dh_code = s.dh_code and a.ct_id = s.ct_id  
+                                                //         left join BZ_MASTER_COUNTRY b on a.ct_id = b.ct_id
+                                                //         left join bz_master_continent c on b.ctn_id = c.ctn_id 
+                                                //         where a.dh_code = '" + value.id + "' order by s.id ";
 
-                                                //sql = " select distinct b.ct_name name1, c.ctn_name name2";
-                                                //sql += " from BZ_DOC_COUNTRY a left join BZ_MASTER_COUNTRY b on a.ct_id = b.ct_id ";
-                                                //sql += " left join bz_master_continent c on b.ctn_id = c.ctn_id ";
-                                                //sql += " where a.dh_code = '" + value.id + "' ";
+                                                //var temp = context.Database.SqlQuery<tempModel>(sql).ToList(); 
                                                 sql = @" select distinct to_char(s.id) as id, b.ct_name name1, c.ctn_name name2 
                                                          from BZ_DOC_COUNTRY a 
                                                          left join (select min(dte_id) as id, dh_code, ct_id from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ct_id) s on a.dh_code = s.dh_code and a.ct_id = s.ct_id  
                                                          left join BZ_MASTER_COUNTRY b on a.ct_id = b.ct_id
                                                          left join bz_master_continent c on b.ctn_id = c.ctn_id 
-                                                         where a.dh_code = '" + value.id + "' order by s.id ";
+                                                         where a.dh_code = :doc_id order by s.id ";
 
-                                                //DevFix 20210819 0000  แก้ไขเทส case เลือกไป 2 ประเทศ แต่ในอีเมล์แสดงแค่ประเทศเดียว ?ต้องแสดงทั้งหมด
-                                                //sql += " and no = 1 ";
-                                                var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                                 if (temp != null && temp.Count() > 0)
                                                 {
                                                     //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -1394,14 +1879,21 @@ namespace top.ebiz.service.Service.Create_trip
 
                                             var iNo = 1;
                                             sTravelerList = "<table>";
-                                            foreach (var item in tempTravel)
+                                            if (tempTravel != null && tempTravel.Count() > 0)
                                             {
-                                                sTravelerList += " <tr>";
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                                sTravelerList += " </tr>";
-                                                iNo++;
+                                                foreach (var item in tempTravel)
+                                                {
+                                                    sTravelerList += " <tr>";
+                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                    sTravelerList += " </tr>";
+                                                    iNo++;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                sTravelerList += " <tr><td></td></tr>";
                                             }
                                             sTravelerList += "</table>";
 
@@ -1480,25 +1972,33 @@ namespace top.ebiz.service.Service.Create_trip
                 }
                 if (data.status == "S")
                 {
-                    using (TOPEBizEntities context = new TOPEBizEntities())
+                    if (newDocNo)
                     {
-                        if (newDocNo)
+                        using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                         {
-                            using (DbContextTransaction transaction = context.Database.BeginTransaction())
+                            using (var transaction = context.Database.BeginTransaction())
                             {
                                 //DevFix 20210527 0000 เพิ่มข้อมูล ประเภทใบงานเป็น 1:flow, 2:not flow, 3:training เก็บไว้ที่  BZ_DOC_HEAD.DH_TYPE_FLOW 
                                 if (value.action.type == "1" || value.action.type == "5")
                                 {
-                                    //doc_head_search.DH_TYPE_FLOW = value.type_flow ?? "";
-                                    var sdh_code = value.id;
+                                    //doc_head_search.DH_TYPE_FLOW = value.type_flow ?? ""; 
                                     var stype_flow = value.type_flow ?? "";
-                                    var sqlstr_update = "UPDATE BZ_DOC_HEAD SET DH_TYPE_FLOW = " + stype_flow + " WHERE DH_CODE = '" + sdh_code + "'";
-                                    //context.Database.ExecuteSqlCommand(sqlstr_update);
+                                    //var sqlstr_update = "UPDATE BZ_DOC_HEAD SET DH_TYPE_FLOW = " + stype_flow + " WHERE DH_CODE = '" + sdh_code + "'";
 
-                                    context.Database.ExecuteSqlCommand("UPDATE BZ_DOC_HEAD SET DH_TYPE_FLOW = " + (value.type_flow ?? "") + " WHERE DH_CODE = '" + value.id + "'");
-
-                                    context.SaveChanges();
-                                    transaction.Commit();
+                                    var sql = "UPDATE BZ_DOC_HEAD SET DH_TYPE_FLOW = :stype_flow WHERE DH_CODE = :doc_id ";
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("stype_flow", stype_flow, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    var iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0)
+                                    {
+                                        context.SaveChanges();
+                                        transaction.Commit();
+                                    }
+                                    else
+                                    {
+                                        transaction.Rollback();
+                                    }
                                 }
                             }
                         }
@@ -1549,7 +2049,11 @@ namespace top.ebiz.service.Service.Create_trip
                 var approveList = new List<docFlow2_approve>();
                 var approveList_Def = new List<docFlow2_approve>();
 
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                var doc_id = value.doc_id ?? "";
+                var token_login = value.token_login ?? "";
+                var parameters = new List<OracleParameter>();
+
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
 
                     var doc_head_search = context.BZ_DOC_HEAD.Find(value.doc_id);
@@ -1574,23 +2078,31 @@ namespace top.ebiz.service.Service.Create_trip
                         {
                             expenList_check = value.oversea.traveler;
                         }
-
                         //int irow_test = 0;
                         foreach (var item in expenList_check)
                         {
-                            var _DTE_TOKEN = item.ref_id;
-                            //if (irow_test == 1) { _DTE_TOKEN = ""; }
-                            //irow_test++; 
-                            sql = @" select distinct DTE_TOKEN as ref_id FROM bz_doc_traveler_expense a WHERE a.dh_code in ('" + value.doc_id + "') and DTE_TOKEN = '" + _DTE_TOKEN + "' order by DTE_TOKEN ";
-                            var temp_token_expen = context.Database.SqlQuery<docFlow2_travel>(sql).ToList();
+                            var dte_token = item.ref_id;
+                            //sql = @" select distinct DTE_TOKEN as ref_id FROM bz_doc_traveler_expense a WHERE a.dh_code in ('" + value.doc_id + "') and DTE_TOKEN = '" + _DTE_TOKEN + "' order by DTE_TOKEN ";
+                            //var temp_token_expen = context.Database.SqlQuery<docFlow2_travel>(sql).ToList();
+
+                            sql = @" select distinct DTE_TOKEN as ref_id FROM bz_doc_traveler_expense a WHERE a.dh_code = :doc_id and DTE_TOKEN = :dte_token order by DTE_TOKEN ";
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            parameters.Add(context.ConvertTypeParameter("dte_token", dte_token, "char"));
+                            var temp_token_expen = context.DocFlow2TravelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                             if (temp_token_expen != null && temp_token_expen.Count() > 0)
                             { }
                             else
                             {
 
                                 //หา id log ล่าสุดที่ส่งมา เพื่อให้ support check 
-                                sql = @" select to_char(id) as ref_id, data_log as remark from  BZ_TRANS_LOG where data_log like '%" + value.doc_id + "%' and event  = 'FLOW2' and module = 'DOCUMENT' order by to_number(id) desc";
-                                var temp_trans_log = context.Database.SqlQuery<docFlow2_travel>(sql).ToList();
+                                //sql = @" select to_char(id) as ref_id, data_log as remark from  BZ_TRANS_LOG where data_log like '%" + value.doc_id + "%' and event  = 'FLOW2' and module = 'DOCUMENT' order by to_number(id) desc";
+                                //var temp_trans_log = context.Database.SqlQuery<docFlow2_travel>(sql).ToList();
+                                sql = @" select to_char(id) as ref_id, data_log as remark from  BZ_TRANS_LOG where data_log like '%' || :doc_id || '%'  and event  = 'FLOW2' and module = 'DOCUMENT' order by to_number(id) desc";
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                var temp_trans_log = context.DocFlow2TravelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                 var trans_log_id = "";
                                 var trans_log_data_log = "";
                                 try { trans_log_id = temp_trans_log[0].ref_id.ToString(); } catch { }
@@ -1606,11 +2118,14 @@ namespace top.ebiz.service.Service.Create_trip
                     #endregion DevFix 20221108 0000 เนื่องจากเจอเคสที่ข้อมูล token ของ item traveler ข้อมูลไม่ตรงกับในตาราง จึงเช็คเพิ่มเติม
 
 
-                    var docHeadStatus = new List<DocHeadModel>();
-                    sql = " select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = '" + value.doc_id + "' ";
-                    docHeadStatus = context.Database.SqlQuery<DocHeadModel>(sql).ToList();
+                    //var docHeadStatus = new List<DocHeadModel>();
+                    //sql = " select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = '" + value.doc_id + "' ";
+                    //docHeadStatus = context.Database.SqlQuery<DocHeadModel>(sql).ToList();
+                    sql = " select to_char(dh_doc_status) as document_status from bz_doc_head h where h.dh_code = :doc_id ";
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var docHeadStatus = context.DocHeadModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                     var pf_doc_id = docHeadStatus[0].document_status.Substring(0, 1);
-
 
                     string admin_mail = "";
                     string requester_mail = "";
@@ -1622,20 +2137,40 @@ namespace top.ebiz.service.Service.Create_trip
                     #region DevFix 20200911 0000 
                     var Tel_Services_Team = "";
                     var Tel_Call_Center = "";
-                    sql = @" SELECT key_value as tel_services_team
-                                 from bz_config_data where lower(key_name) = lower('tel_services_team') and status = 1";
-                    var tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
-                    try { Tel_Services_Team = tellist[0].tel_services_team; } catch { }
-                    sql = @" SELECT key_value as tel_call_center 
-                                 from bz_config_data where lower(key_name) = lower('tel_call_center') and status = 1";
-                    tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
-                    try { Tel_Call_Center = tellist[0].tel_call_center; } catch { }
+                    ////sql = @" SELECT key_value as tel_services_team from bz_config_data where lower(key_name) = lower('tel_services_team') and status = 1";
+                    ////var tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
+                    //sql = @" SELECT key_value as tel_services_team from bz_config_data where lower(key_name) = lower('tel_services_team') and status = 1";
+                    //parameters = new List<OracleParameter>();
+                    //var tellist = context.TelephoneModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                    //try { Tel_Services_Team = tellist[0].tel_services_team; } catch { }
+
+                    //// sql = @" SELECT key_value as tel_call_center 
+                    ////              from bz_config_data where lower(key_name) = lower('tel_call_center') and status = 1";
+                    ////var  telcalllist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
+                    //sql = @" SELECT key_value as tel_call_center 
+                    //             from bz_config_data where lower(key_name) = lower('tel_call_center') and status = 1";
+                    //parameters = new List<OracleParameter>();
+                    //var telcalllist = context.TelephoneModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                    //try { Tel_Call_Center = telcalllist[0].tel_call_center; } catch { }
+
+
+                    getTelServicesTeamCallCenter(ref Tel_Services_Team, ref Tel_Call_Center);
+
                     #endregion DevFix 20200911 0000 
 
 
                     #region DevFix 20210729 0000 ส่งเมลแจ้งคนที่ Requester & On behalf of  &  cc initiator & admin
-                    sql = "SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users WHERE role_id = 1 ";
-                    var adminList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                    //sql = "SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users WHERE role_id = 1 ";
+                    //var adminList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
+                    sql = "SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users WHERE role_id = :role_id ";
+                    var role_id = "1";
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("role_id", role_id, "char"));
+                    var adminList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                     if (adminList != null)
                     {
                         foreach (var item in adminList)
@@ -1653,9 +2188,16 @@ namespace top.ebiz.service.Service.Create_trip
                         admin_mail += mail_group_admin(context, "pmdv_admin");
                     }
 
+                    //sql = @" SELECT EMPLOYEEID as user_id,  nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email FROM BZ_USERS b
+                    //             WHERE EMPLOYEEID IN ( SELECT DH_CREATE_BY FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.doc_id + "')";
+                    //var requesterList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
                     sql = @" SELECT EMPLOYEEID as user_id,  nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email FROM BZ_USERS b
-                                 WHERE EMPLOYEEID IN ( SELECT DH_CREATE_BY FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.doc_id + "')";
-                    var requesterList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                 WHERE EMPLOYEEID IN ( SELECT DH_CREATE_BY FROM  BZ_DOC_HEAD WHERE DH_CODE = :doc_id)";
+
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var requesterList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                     if (requesterList != null)
                     {
                         if (requesterList.Count > 0)
@@ -1664,9 +2206,16 @@ namespace top.ebiz.service.Service.Create_trip
                             requester_name = requesterList[0].user_name;
                         }
                     }
+                    //sql = @" SELECT EMPLOYEEID user_id, EMAIL email FROM BZ_USERS 
+                    //             WHERE EMPLOYEEID IN ( SELECT DH_BEHALF_EMP_ID FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.doc_id + "')";
+                    //var behalfList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
                     sql = @" SELECT EMPLOYEEID user_id, EMAIL email FROM BZ_USERS 
-                                 WHERE EMPLOYEEID IN ( SELECT DH_BEHALF_EMP_ID FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.doc_id + "')";
-                    var behalfList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                 WHERE EMPLOYEEID IN ( SELECT DH_BEHALF_EMP_ID FROM  BZ_DOC_HEAD WHERE DH_CODE = :doc_id)";
+
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var behalfList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                     if (behalfList != null)
                     {
                         if (behalfList.Count > 0)
@@ -1674,9 +2223,16 @@ namespace top.ebiz.service.Service.Create_trip
                             on_behalf_of_mail = ";" + behalfList[0].email;
                         }
                     }
+                    //sql = @"SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users
+                    //                 WHERE EMPLOYEEID in (select dh_initiator_empid from bz_doc_head where dh_code ='" + value.doc_id + "')  ";
+                    //var initial = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
                     sql = @"SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users
-                                     WHERE EMPLOYEEID in (select dh_initiator_empid from bz_doc_head where dh_code ='" + value.doc_id + "')  ";
-                    var initial = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                     WHERE EMPLOYEEID in (select dh_initiator_empid from bz_doc_head where dh_code = :doc_id)  ";
+
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var initial = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                     if (initial != null && initial.Count() > 0)
                     {
                         on_behalf_of_mail += ";" + initial[0].email;
@@ -1685,9 +2241,14 @@ namespace top.ebiz.service.Service.Create_trip
 
 
                     //DevFix 20210527 0000 เพิ่มข้อมูล ประเภทใบงานเป็น 1:flow, 2:not flow, 3:training เก็บไว้ที่  BZ_DOC_HEAD.DH_TYPE_FLOW 
-                    sql = @"SELECT a.DH_TYPE_FLOW FROM BZ_DOC_HEAD a where a.DH_CODE ='" + value.doc_id + "'";
-                    var docHead = new List<DocList3Model>();
-                    docHead = context.Database.SqlQuery<DocList3Model>(sql).ToList();
+                    //sql = @"SELECT a.DH_TYPE_FLOW FROM BZ_DOC_HEAD a where a.DH_CODE ='" + value.doc_id + "'";
+                    //var docHead = new List<DocList3Model>();
+                    sql = @"SELECT a.DH_TYPE_FLOW FROM BZ_DOC_HEAD a where a.DH_CODE = :doc_id";
+
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var docHead = context.DocList3ModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                     if (docHead != null)
                     {
                         if ((docHead[0].DH_TYPE_FLOW ?? "1") != "1") { type_flow = false; }
@@ -1696,9 +2257,29 @@ namespace top.ebiz.service.Service.Create_trip
                     #region DevFix 20200827 ตรวจสอบ approver list ต้องมี Endorsed และ CAP ของแต่ละ Requester
                     if (value.action.type == "5") // submit
                     {
-                        var employeeList = new List<employeeDoc2>();
+                        //var employeeList = new List<employeeDoc2>();
                         #region employee
-                        //employee
+
+                        //sql = " SELECT DTE_TOKEN ref_id, DTE_EMP_ID id, U.Employeeid ";
+                        //sql += " , nvl(U.ENTITLE, '') || ' ' || U.ENFIRSTNAME || ' ' || U.ENLASTNAME || case when h.DH_TRAVEL ='1' then '' else ' | ' || case when h.DH_TYPE ='local' then p.pv_name else c.ct_name end end name ";
+                        //sql += " , nvl(U.ENTITLE, '') || ' ' || U.ENFIRSTNAME || ' ' || U.ENLASTNAME  name2 ";
+                        //sql += " , U.ORGNAME org, DTE_TRAVEL_DAYS ";
+                        //sql += " , case when tv.DTE_BUS_FROMDATE is null then '' else to_char(tv.DTE_BUS_FROMDATE, 'dd Mon rrrr') || ' - ' || to_char(tv.DTE_BUS_TODATE, 'dd Mon rrrr') end as business_date ";
+                        //sql += " , case when DTE_TRAVEL_FROMDATE is null then '' else to_char(DTE_TRAVEL_FROMDATE, 'dd Mon rrrr') || ' - ' || to_char(DTE_TRAVEL_TODATE, 'dd Mon rrrr') end as travel_date ";
+                        //sql += " , to_char('') visa_fee, '' passport_expense, '' clothing_expense ";
+                        //sql += " , to_char(c.ct_id) country_id, c.ct_name country ";
+                        //sql += " , p.pv_name province ";
+                        //sql += " , tv.dte_traveler_remark remark ";
+
+                        //sql += " FROM bz_doc_traveler_expense tv inner join BZ_DOC_HEAD h on h.dh_code=tv.dh_code ";
+                        //sql += " inner join BZ_USERS U on tv.DTE_Emp_Id = u.employeeid ";
+                        //sql += " left join bz_master_country c on tv.ct_id = c.ct_id ";
+                        //sql += " left join BZ_MASTER_PROVINCE p on tv.PV_ID = p.PV_ID ";
+                        //sql += " WHERE tv.dh_code = '" + value.doc_id + "' and tv.dte_status = 1 ";
+                        //sql += " order by DTE_ID ";
+
+                        //employeeList = context.Database.SqlQuery<employeeDoc2>(sql).ToList();
+
                         sql = " SELECT DTE_TOKEN ref_id, DTE_EMP_ID id, U.Employeeid ";
                         sql += " , nvl(U.ENTITLE, '') || ' ' || U.ENFIRSTNAME || ' ' || U.ENLASTNAME || case when h.DH_TRAVEL ='1' then '' else ' | ' || case when h.DH_TYPE ='local' then p.pv_name else c.ct_name end end name ";
                         sql += " , nvl(U.ENTITLE, '') || ' ' || U.ENFIRSTNAME || ' ' || U.ENLASTNAME  name2 ";
@@ -1714,10 +2295,12 @@ namespace top.ebiz.service.Service.Create_trip
                         sql += " inner join BZ_USERS U on tv.DTE_Emp_Id = u.employeeid ";
                         sql += " left join bz_master_country c on tv.ct_id = c.ct_id ";
                         sql += " left join BZ_MASTER_PROVINCE p on tv.PV_ID = p.PV_ID ";
-                        sql += " WHERE tv.dh_code = '" + value.doc_id + "' and tv.dte_status = 1 ";
+                        sql += " WHERE tv.dh_code = :doc_id and tv.dte_status = 1 ";
                         sql += " order by DTE_ID ";
 
-                        employeeList = context.Database.SqlQuery<employeeDoc2>(sql).ToList();
+                        parameters = new List<OracleParameter>();
+                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                        var employeeList = context.EmployeeDoc2ModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                         #endregion employee
 
@@ -1809,32 +2392,59 @@ namespace top.ebiz.service.Service.Create_trip
 
                     #region DevFix 20200827 ตรวจสอบ position approver  
                     var query = "";
+                    //query = @"SELECT A.SH,A.VP,A.AEP,A.EVP,A.SEVP,A.CEO,B.DTE_EMP_ID AS ORG_ID
+                    //                 FROM BZ_MASTER_COSTCENTER_ORG a
+                    //                 INNER JOIN BZ_DOC_TRAVELER_EXPENSE B ON  A.COST_CENTER = B.DTE_COST_CENTER
+                    //                 WHERE B.DH_CODE = '" + value.doc_id + "' ";
+                    //var masterCostCenterList1 = context.Database.SqlQuery<MasterCostCenter>(query).ToList();
                     query = @"SELECT A.SH,A.VP,A.AEP,A.EVP,A.SEVP,A.CEO,B.DTE_EMP_ID AS ORG_ID
                                      FROM BZ_MASTER_COSTCENTER_ORG a
                                      INNER JOIN BZ_DOC_TRAVELER_EXPENSE B ON  A.COST_CENTER = B.DTE_COST_CENTER
-                                     WHERE B.DH_CODE = '" + value.doc_id + "' ";
-                    var masterCostCenterList1 = context.Database.SqlQuery<MasterCostCenter>(query).ToList();
+                                     WHERE B.DH_CODE = :doc_id ";
+
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var masterCostCenterList1 = context.MasterCostCenterList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
 
                     //กรณีที่ตรวจสอบระดับ SEVP แต่ไม่มี Cost center ให้ไปหา CEO
+                    //query = "select null as SEVP, employeeid as CEO from  bz_users a  where  POSCAT = 'MD' and department is null and sections is null ";
+                    //var masterCostCenterList2 = context.Database.SqlQuery<MasterCostCenter>(query).ToList();
                     query = "select null as SEVP, employeeid as CEO from  bz_users a  where  POSCAT = 'MD' and department is null and sections is null ";
-                    var masterCostCenterList2 = context.Database.SqlQuery<MasterCostCenter>(query).ToList();
+
+                    parameters = new List<OracleParameter>();
+                    //parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var masterCostCenterList2 = context.MasterCostCenterList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
 
                     #endregion DevFix 20200827 ตรวจสอบ position approver  
 
 
                     #region DevFix 20210810 เพิ่มรายชื่อ userเพื่อใช้ในเงื่อนไขลำดับแค่ CAP ของ Local  
-                    query = "SELECT EMPLOYEEID, ENTITLE, ENFIRSTNAME, ENLASTNAME, ORGNAME, MANAGER_EMPID, SH, VP, AEP, EVP, SEVP, CEO";
-                    query += " FROM BZ_USERS";
-                    var usersList = context.Database.SqlQuery<TravelerUsers>(query).ToList();
+                    //query = "SELECT EMPLOYEEID, ENTITLE, ENFIRSTNAME, ENLASTNAME, ORGNAME, MANAGER_EMPID, SH, VP, AEP, EVP, SEVP, CEO";
+                    //query += " FROM BZ_USERS";
+                    //var usersList = context.Database.SqlQuery<TravelerUsers>(query).ToList();
+                    query = "SELECT EMPLOYEEID, ENTITLE, ENFIRSTNAME, ENLASTNAME, ORGNAME, MANAGER_EMPID, SH, VP, AEP, EVP, SEVP, CEO FROM BZ_USERS";
+
+                    parameters = new List<OracleParameter>();
+                    //parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var usersList = context.TravelerUsersModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                     #endregion DevFix 20210810 เพิ่มรายชื่อ userเพื่อใช้ในเงื่อนไขลำดับแค่ CAP ของ Local  
 
-                    using (DbContextTransaction transaction = context.Database.BeginTransaction())
+                    using (var transaction = context.Database.BeginTransaction())
                     {
-                        var User = new List<SearchUserModel>(); //a.USER_NAME,
+                        //var User = new List<SearchUserModel>(); //a.USER_NAME,
+                        //sql = "SELECT   a.user_id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, b.email email ";
+                        //sql += "FROM bz_login_token a left join bz_users b on a.user_id=b.employeeid ";
+                        //sql += " WHERE a.TOKEN_CODE ='" + value.token_login + "' ";
+                        //User = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
                         sql = "SELECT   a.user_id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, b.email email ";
-                        sql += "FROM bz_login_token a left join bz_users b on a.user_id=b.employeeid ";
-                        sql += " WHERE a.TOKEN_CODE ='" + value.token_login + "' ";
-                        User = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                        sql += " FROM bz_login_token a left join bz_users b on a.user_id=b.employeeid ";
+                        sql += " WHERE a.TOKEN_CODE = :token_login ";
+
+                        parameters = new List<OracleParameter>();
+                        parameters.Add(context.ConvertTypeParameter("token_login", token_login, "char"));
+                        var User = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                         if ((doc_head_search.DH_TYPE ?? "") == "local" ||
                             (doc_head_search.DH_TYPE ?? "") == "localtraining")
@@ -1869,7 +2479,11 @@ namespace top.ebiz.service.Service.Create_trip
                             doc_head_search.DH_UPDATE_DATE = DateTime.Now;
 
                             old_action_status = doc_head_search.DH_DOC_STATUS;
-                            prefix_old_doctype = old_action_status.ToString().Substring(0, 1);
+                            var _old_action_status = old_action_status?.ToString() ?? "";
+                            if (_old_action_status?.ToString().Length > 1)
+                            {
+                                prefix_old_doctype = _old_action_status?.Substring(0, 1)?.ToString() ?? "";
+                            }
                             if (prefix_old_doctype == "2" || prefix_old_doctype == "3")
                             {
                                 next_topno = 3;
@@ -1891,7 +2505,11 @@ namespace top.ebiz.service.Service.Create_trip
                                 expense_status = 20;
                                 doc_head_search.DH_DOC_STATUS = expense_status;
                                 doc_head_search.DH_REMARK_REJECT = value.action.remark ?? "";
-                                context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                //context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                sql = @"update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = :doc_id ";
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                             }
                             else if (value.action.type == "3") // revise
                             {
@@ -1906,14 +2524,24 @@ namespace top.ebiz.service.Service.Create_trip
                                         expense_status = 22;
 
                                     doc_head_search.DH_DOC_STATUS = expense_status;
-                                    context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                    //context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                    sql = @"update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = :doc_id ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                 }
                                 else
                                 {
                                     // tab3, tab4
                                     // ดู record action ที่ doc_status ขึ้นต้นด้วย 2
-                                    sql = "update BZ_DOC_ACTION  set action_status = 2  where DH_CODE='" + value.doc_id + "' and (DOC_STATUS >= 21 and DOC_STATUS <=29) and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    //sql = "update BZ_DOC_ACTION  set action_status = 2  where DH_CODE='" + value.doc_id + "' and (DOC_STATUS >= 21 and DOC_STATUS <=29) and ACTION_STATUS=1 ";
+                                    //context.Database.ExecuteSqlCommand(sql);
+                                    sql = "update BZ_DOC_ACTION  set action_status = 2  where DH_CODE= :doc_id and (DOC_STATUS >= 21 and DOC_STATUS <=29) and ACTION_STATUS=1 ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                 }
 
                                 if (!string.IsNullOrEmpty(doc_head_search.DH_INITIATOR_EMPID))
@@ -1990,10 +2618,15 @@ namespace top.ebiz.service.Service.Create_trip
                             var expenTemp = new List<docFlow2_travel>();
                             var tempEmpForAction = new List<BZ_DOC_ACTION>();
 
-                            sql = @" select *
-                                     from BZ_DOC_TRAVELER_APPROVER a
-                                     where a.dh_code = '" + value.doc_id + "' and a.DTA_STATUS = 1";
-                            var travelApproveTemp = context.Database.SqlQuery<BZ_DOC_TRAVELER_APPROVER_V2>(sql).ToList();
+                            //sql = @" select *
+                            //         from BZ_DOC_TRAVELER_APPROVER a
+                            //         where a.dh_code = '" + value.doc_id + "' and a.DTA_STATUS = 1";
+                            //var travelApproveTemp = context.Database.SqlQuery<BZ_DOC_TRAVELER_APPROVER_V2>(sql).ToList();
+                            sql = @" select * from BZ_DOC_TRAVELER_APPROVER a where a.dh_code = :doc_id and a.DTA_STATUS = 1";
+
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            var travelApproveTemp = context.TravelApproveList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                             decimal inx = 0;
                             foreach (var item in expenList)
@@ -2002,66 +2635,142 @@ namespace top.ebiz.service.Service.Create_trip
 
                                 #region "#### BZ_DOC_TRAVELER_EXPENSE ####"
 
-                                sql = " update BZ_DOC_TRAVELER_EXPENSE set ";
-                                sql += " DTE_TOKEN_UPD = '" + expen_upd_token + "' ";
-                                sql += " , DTE_ID= " + inx.ToString();
-                                //sql += " , DTE_EMP_ID =  '" + chkString(item.emp_id) + "' ";
-                                sql += " , DTE_AIR_TECKET = '" + chkString(item.air_ticket) + "'";
-                                sql += " , DTE_ACCOMMODATIC = '" + chkString(item.accommodation) + "'";
-                                sql += " , DTE_ALLOWANCE = '" + chkString(item.allowance) + "' ";
-                                sql += " , DTE_ALLOWANCE_DAY = " + retDecimalSQL(item.allowance_day);
-                                sql += " , DTE_ALLOWANCE_NIGHT = " + retDecimalSQL(item.allowance_night);
-                                //sql += " , DTE_CL_VALID = " + chkDateSQL(item.clothing_valid ?? "");
-                                sql += " , DTE_CL_EXPENSE = '" + chkString(item.clothing_expense) + "' ";
-                                //sql += " , DTE_PASSPORT_VALID = " + chkDateSQL(item.passport_valid ?? "");
-                                sql += " , DTE_PASSPORT_EXPENSE = '" + chkString(item.passport_expense) + "' ";
-                                sql += " , DTE_VISA_FREE = '" + chkString(item.visa_fee) + "' ";
-                                sql += " , DTE_TRAVEL_INS = '" + chkString(item.travel_insurance) + "' ";
-                                sql += " , DTE_TRANSPORT = '" + chkString(item.transportation) + "'";
-                                sql += " , DTE_MISCELLANEOUS = '" + chkString(item.miscellaneous) + "' ";
-                                sql += " , DTE_TOTAL_EXPENSE = " + retDecimalSQL(item.total_expenses);
-                                sql += " , DTE_REGIS_FREE = '" + chkString(item.registration_fee) + "' ";
+                                //sql = " update BZ_DOC_TRAVELER_EXPENSE set ";
+                                //sql += " DTE_TOKEN_UPD = '" + expen_upd_token + "' ";
+                                //sql += " , DTE_ID= " + inx.ToString(); 
+                                //sql += " , DTE_AIR_TECKET = '" + chkString(item.air_ticket) + "'";
+                                //sql += " , DTE_ACCOMMODATIC = '" + chkString(item.accommodation) + "'";
+                                //sql += " , DTE_ALLOWANCE = '" + chkString(item.allowance) + "' ";
+                                //sql += " , DTE_ALLOWANCE_DAY = " + retDecimalSQL(item.allowance_day);
+                                //sql += " , DTE_ALLOWANCE_NIGHT = " + retDecimalSQL(item.allowance_night); 
+                                //sql += " , DTE_CL_EXPENSE = '" + chkString(item.clothing_expense) + "' "; 
+                                //sql += " , DTE_PASSPORT_EXPENSE = '" + chkString(item.passport_expense) + "' ";
+                                //sql += " , DTE_VISA_FREE = '" + chkString(item.visa_fee) + "' ";
+                                //sql += " , DTE_TRAVEL_INS = '" + chkString(item.travel_insurance) + "' ";
+                                //sql += " , DTE_TRANSPORT = '" + chkString(item.transportation) + "'";
+                                //sql += " , DTE_MISCELLANEOUS = '" + chkString(item.miscellaneous) + "' ";
+                                //sql += " , DTE_TOTAL_EXPENSE = " + retDecimalSQL(item.total_expenses);
+                                //sql += " , DTE_REGIS_FREE = '" + chkString(item.registration_fee) + "' ";
+                                //sql += " , DTE_CL_VALID = " + chkDateSQL_All(item.clothing_valid ?? "");
+                                //sql += " , DTE_PASSPORT_VALID = " + chkDateSQL_All(item.passport_valid ?? "");
 
-                                sql += " , DTE_CL_VALID = " + chkDateSQL_All(item.clothing_valid ?? "");
-                                sql += " , DTE_PASSPORT_VALID = " + chkDateSQL_All(item.passport_valid ?? "");
+                                //if (value.action.type == "5")
+                                //{
+                                //    if (prefix_old_doctype == "3")
+                                //    {
+                                //        //DevFix 20200901 2357 เพิ่มเงื่อนไขให้ update เฉพาะรายการที่ยังไม่ถูก approve โดย Line ,CAP                                             sql += " , DTE_APPR_STATUS = case when DTE_APPR_STATUS = 23 then '31' else DTE_APPR_STATUS end  ";
+                                //        sql += ", DTE_APPR_STATUS =case when DTE_APPR_STATUS = 23 then 31 else DTE_APPR_STATUS end  ";
+                                //        sql += ", DTE_APPR_OPT=case when DTE_APPR_STATUS = 23 then '' else DTE_APPR_OPT end ";
+                                //        sql += ", DTE_APPR_REMARK=case when DTE_APPR_STATUS = 23 then '' else DTE_APPR_REMARK end ";
+                                //    }
+                                //    else if (prefix_old_doctype == "4")
+                                //    {
+                                //        //DevFix 20200901 2357 เพิ่มเงื่อนไขให้ update เฉพาะรายการที่ยังไม่ถูก approve โดย Line ,CAP  
+                                //        sql += ", DTE_CAP_APPR_STATUS=case when DTE_CAP_APPR_STATUS = 23 then 41 else DTE_CAP_APPR_STATUS end ";
+                                //        sql += ", DTE_CAP_APPR_OPT=case when DTE_CAP_APPR_STATUS = 23 then '' else DTE_CAP_APPR_OPT end ";
+                                //        sql += ", DTE_CAP_APPR_REMARK=case when DTE_CAP_APPR_STATUS = 23 then '' else DTE_CAP_APPR_REMARK end ";
+                                //    }
+                                //    else
+                                //    {
+                                //        sql += " , DTE_APPR_STATUS = " + expense_status;
+                                //    }
+                                //}
+                                //sql += " , DTE_EXPENSE_CONFIRM=1 ";
+                                //sql += " where DTE_TOKEN='" + item.ref_id + "'";
 
+                                //context.Database.ExecuteSqlCommand(sql);
+
+                                sql = @"UPDATE BZ_DOC_TRAVELER_EXPENSE SET 
+                                            DTE_TOKEN_UPD = :expen_upd_token,
+                                            DTE_ID = :inx,
+                                            DTE_AIR_TECKET = :air_ticket,
+                                            DTE_ACCOMMODATIC = :accommodation,
+                                            DTE_ALLOWANCE = :allowance,
+                                            DTE_ALLOWANCE_DAY = :allowance_day,
+                                            DTE_ALLOWANCE_NIGHT = :allowance_night,
+                                            DTE_CL_EXPENSE = :clothing_expense,
+                                            DTE_PASSPORT_EXPENSE = :passport_expense,
+                                            DTE_VISA_FREE = :visa_fee,
+                                            DTE_TRAVEL_INS = :travel_insurance,
+                                            DTE_TRANSPORT = :transportation,
+                                            DTE_MISCELLANEOUS = :miscellaneous,
+                                            DTE_TOTAL_EXPENSE = :total_expenses,
+                                            DTE_REGIS_FREE = :registration_fee,
+                                            DTE_CL_VALID = :clothing_valid,
+                                            DTE_PASSPORT_VALID = :passport_valid,
+                                            DTE_EXPENSE_CONFIRM = 1 ";
+
+                                // ตรวจสอบเงื่อนไขสำหรับการอัปเดตเพิ่มเติม
                                 if (value.action.type == "5")
                                 {
                                     if (prefix_old_doctype == "3")
                                     {
-                                        //DevFix 20200901 2357 เพิ่มเงื่อนไขให้ update เฉพาะรายการที่ยังไม่ถูก approve โดย Line ,CAP                                             sql += " , DTE_APPR_STATUS = case when DTE_APPR_STATUS = 23 then '31' else DTE_APPR_STATUS end  ";
-                                        sql += ", DTE_APPR_STATUS =case when DTE_APPR_STATUS = 23 then 31 else DTE_APPR_STATUS end  ";
-                                        sql += ", DTE_APPR_OPT=case when DTE_APPR_STATUS = 23 then '' else DTE_APPR_OPT end ";
-                                        sql += ", DTE_APPR_REMARK=case when DTE_APPR_STATUS = 23 then '' else DTE_APPR_REMARK end ";
+                                        sql += @"
+                                             , DTE_APPR_STATUS = CASE WHEN DTE_APPR_STATUS = 23 THEN 31 ELSE DTE_APPR_STATUS END
+                                             , DTE_APPR_OPT = CASE WHEN DTE_APPR_STATUS = 23 THEN '' ELSE DTE_APPR_OPT END
+                                             , DTE_APPR_REMARK = CASE WHEN DTE_APPR_STATUS = 23 THEN '' ELSE DTE_APPR_REMARK END  ";
                                     }
                                     else if (prefix_old_doctype == "4")
                                     {
-                                        //DevFix 20200901 2357 เพิ่มเงื่อนไขให้ update เฉพาะรายการที่ยังไม่ถูก approve โดย Line ,CAP  
-                                        sql += ", DTE_CAP_APPR_STATUS=case when DTE_CAP_APPR_STATUS = 23 then 41 else DTE_CAP_APPR_STATUS end ";
-                                        sql += ", DTE_CAP_APPR_OPT=case when DTE_CAP_APPR_STATUS = 23 then '' else DTE_CAP_APPR_OPT end ";
-                                        sql += ", DTE_CAP_APPR_REMARK=case when DTE_CAP_APPR_STATUS = 23 then '' else DTE_CAP_APPR_REMARK end ";
+                                        sql += @"
+                                            , DTE_CAP_APPR_STATUS = CASE WHEN DTE_CAP_APPR_STATUS = 23 THEN 41 ELSE DTE_CAP_APPR_STATUS END
+                                            , DTE_CAP_APPR_OPT = CASE WHEN DTE_CAP_APPR_STATUS = 23 THEN '' ELSE DTE_CAP_APPR_OPT END 
+                                            , DTE_CAP_APPR_REMARK = CASE WHEN DTE_CAP_APPR_STATUS = 23 THEN '' ELSE DTE_CAP_APPR_REMARK END  ";
                                     }
                                     else
                                     {
-                                        sql += " , DTE_APPR_STATUS = " + expense_status;
+                                        sql += " , DTE_APPR_STATUS = :expense_status";
                                     }
                                 }
-                                sql += " , DTE_EXPENSE_CONFIRM=1 ";
-                                sql += " where DTE_TOKEN='" + item.ref_id + "'";
+                                sql += " WHERE DTE_TOKEN = :ref_id";
 
-                                context.Database.ExecuteSqlCommand(sql);
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("expen_upd_token", expen_upd_token, "char"));
+                                parameters.Add(context.ConvertTypeParameter("inx", inx, "int"));
+                                parameters.Add(context.ConvertTypeParameter("air_ticket", item.air_ticket, "char"));
+                                parameters.Add(context.ConvertTypeParameter("accommodation", item.accommodation, "char"));
+                                parameters.Add(context.ConvertTypeParameter("allowance", item.allowance, "char"));
+                                parameters.Add(context.ConvertTypeParameter("allowance_day", item.allowance_day, "int"));
+                                parameters.Add(context.ConvertTypeParameter("allowance_night", item.allowance_night, "int"));
+                                parameters.Add(context.ConvertTypeParameter("clothing_expense", item.clothing_expense, "char"));
+                                parameters.Add(context.ConvertTypeParameter("passport_expense", item.passport_expense, "char"));
+                                parameters.Add(context.ConvertTypeParameter("visa_fee", item.visa_fee, "char"));
+                                parameters.Add(context.ConvertTypeParameter("travel_insurance", item.travel_insurance, "char"));
+                                parameters.Add(context.ConvertTypeParameter("transportation", item.transportation, "char"));
+                                parameters.Add(context.ConvertTypeParameter("miscellaneous", item.miscellaneous, "char"));
+                                parameters.Add(context.ConvertTypeParameter("total_expenses", item.total_expenses, "int"));
+                                parameters.Add(context.ConvertTypeParameter("registration_fee", item.registration_fee, "char"));
+                                parameters.Add(context.ConvertTypeParameter("clothing_valid", chkDateSQL_All(item.clothing_valid ?? ""), "date"));
+                                parameters.Add(context.ConvertTypeParameter("passport_valid", chkDateSQL_All(item.passport_valid ?? ""), "date"));
 
-                                #endregion
+                                if (value.action.type == "5")
+                                {
+                                    if (!(prefix_old_doctype == "3" || prefix_old_doctype == "4"))
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("expense_status", expense_status, "char"));
+                                    }
+                                }
+                                parameters.Add(context.ConvertTypeParameter("ref_id", item.ref_id, "char"));
+
+                                context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
+                                #endregion "#### BZ_DOC_TRAVELER_EXPENSE ####"
 
                             } // end for expen
 
                             // update inaction ในกรณีที่เป็นรายการที่อยู่บนหน้าจอ
-                            sql = "update BZ_DOC_TRAVELER_EXPENSE set DTE_EXPENSE_CONFIRM=0 ";
-                            sql += " where DH_CODE='" + value.doc_id + "' ";
-                            sql += " and ( DTE_TOKEN_UPD != '" + expen_upd_token + "' or DTE_TOKEN_UPD is null) ";
-                            context.Database.ExecuteSqlCommand(sql);
+                            //sql = "update BZ_DOC_TRAVELER_EXPENSE set DTE_EXPENSE_CONFIRM=0 ";
+                            //sql += " where DH_CODE='" + value.doc_id + "' ";
+                            //sql += " and ( DTE_TOKEN_UPD != '" + expen_upd_token + "' or DTE_TOKEN_UPD is null) ";
+                            //context.Database.ExecuteSqlCommand(sql);
+                            sql = "update BZ_DOC_TRAVELER_EXPENSE set DTE_EXPENSE_CONFIRM=0 where DH_CODE= :doc_id  and ( DTE_TOKEN_UPD != :expen_upd_token or DTE_TOKEN_UPD is null) ";
 
-                            #endregion
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            parameters.Add(context.ConvertTypeParameter("expen_upd_token", expen_upd_token, "char"));
+                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
+                            #endregion "#### BZ_DOC_TRAVELER_EXPENSE, BZ_DOC_TRAVELER_EXPENSE_TEMP ####"
 
                             #region "#### Compare BZ_DOC_TRAVELER_APPROVER ####"
 
@@ -2087,16 +2796,33 @@ namespace top.ebiz.service.Service.Create_trip
                                 }
                                 else
                                 {
-                                    //ข้อมูลเก่าใน db ให้ลบทิ้ง
-                                    sql = "delete from BZ_DOC_TRAVELER_APPROVER ";
-                                    sql += " where dh_code = '" + value.doc_id + "' ";
-                                    sql += " and DTA_TYPE='" + item.DTA_TYPE + "' ";
-                                    sql += " and DTA_APPR_EMPID='" + item.DTA_APPR_EMPID + "' ";
-                                    sql += " and DTA_TRAVEL_EMPID='" + item.DTA_TRAVEL_EMPID + "' ";
-                                    sql += " and DTA_STATUS = 1 ";
                                     if (value.action.type != "3") // revise)
                                     {
-                                        int result = context.Database.ExecuteSqlCommand(sql);
+                                        ////ข้อมูลเก่าใน db ให้ลบทิ้ง
+                                        //sql = "delete from BZ_DOC_TRAVELER_APPROVER ";
+                                        //sql += " where dh_code = '" + value.doc_id + "' ";
+                                        //sql += " and DTA_TYPE='" + item.DTA_TYPE + "' ";
+                                        //sql += " and DTA_APPR_EMPID='" + item.DTA_APPR_EMPID + "' ";
+                                        //sql += " and DTA_TRAVEL_EMPID='" + item.DTA_TRAVEL_EMPID + "' ";
+                                        //sql += " and DTA_STATUS = 1 ";
+                                        //if (value.action.type != "3") // revise)
+                                        //{
+                                        //    int result = context.Database.ExecuteSqlCommand(sql);
+                                        //}
+                                        //ข้อมูลเก่าใน db ให้ลบทิ้ง
+                                        sql = "delete from BZ_DOC_TRAVELER_APPROVER ";
+                                        sql += " where dh_code = :doc_id ";
+                                        sql += " and DTA_TYPE= :DTA_TYPE ";
+                                        sql += " and DTA_APPR_EMPID= :DTA_APPR_EMPID ";
+                                        sql += " and DTA_TRAVEL_EMPID= :DTA_TRAVEL_EMPID ";
+                                        sql += " and DTA_STATUS = 1 ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("DTA_TYPE", item.DTA_TYPE, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("DTA_APPR_EMPID", item.DTA_APPR_EMPID, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("DTA_TRAVEL_EMPID", item.DTA_TRAVEL_EMPID, "char"));
+                                        int result = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                     }
                                 }
                             }
@@ -2165,15 +2891,22 @@ namespace top.ebiz.service.Service.Create_trip
                                     item.appr_remark = listFind[0].DTA_APPR_REMARK ?? "";
 
 
-                                    sql = "update BZ_DOC_TRAVELER_APPROVER set ";
-                                    sql += " DTA_UPDATE_TOKEN='" + item.token_update + "' ";
+                                    parameters = new List<OracleParameter>();
+
+                                    //sql = "update BZ_DOC_TRAVELER_APPROVER set ";
+                                    //sql += " DTA_UPDATE_TOKEN='" + item.token_update + "' ";
+                                    sql = "update BZ_DOC_TRAVELER_APPROVER set DTA_UPDATE_TOKEN= :token_update ";
+                                    parameters.Add(context.ConvertTypeParameter("token_update", item.token_update, "char"));
+
                                     if (listFind[0].DTA_DOC_STATUS != null && (listFind[0].DTA_DOC_STATUS == 32 || listFind[0].DTA_DOC_STATUS == 42))
                                     {
 
                                     }
                                     else
                                     {
-                                        sql += " , DTA_ID=" + item.line_id;
+                                        //sql += " , DTA_ID=" + item.line_id;
+                                        sql += " , DTA_ID= :line_id";
+                                        parameters.Add(context.ConvertTypeParameter("line_id", item.line_id, "int"));
 
                                         //  sql += " , DTA_DOC_STATUS=" + next_action_status;
                                         if (approver_status_not_revise_old == false)
@@ -2259,20 +2992,38 @@ namespace top.ebiz.service.Service.Create_trip
                                                 }
 
                                                 //DevFix 20210717 1200 เพิ่มให้ update status ตามเดิมกรณีที่เป็นการ reject / approve CAP ไม่ต้อง อนุมัติใหม่
-                                                if (check_action_update == true) { sql += " , DTA_DOC_STATUS= " + next_action_status.ToString(); }
+                                                if (check_action_update == true)
+                                                {
+                                                    //sql += " , DTA_DOC_STATUS= " + next_action_status.ToString();
+                                                    sql += " , DTA_DOC_STATUS= :next_action_status ";
+                                                    parameters.Add(context.ConvertTypeParameter("next_action_status", next_action_status, "int"));
+                                                }
 
                                             }
                                         }
                                     }
 
                                     if (appr_level == null) { appr_level = "0"; }
-                                    sql += " ,DTA_APPR_LEVEL = '" + appr_level + "' ";
+                                    //sql += " ,DTA_APPR_LEVEL = '" + appr_level + "' ";
+                                    sql += " ,DTA_APPR_LEVEL = :appr_level ";
+                                    parameters.Add(context.ConvertTypeParameter("appr_level", appr_level, "char"));
 
-                                    sql += " where dh_code = '" + value.doc_id + "' ";
-                                    sql += " and DTA_TYPE='" + item.type + "' ";
-                                    sql += " and DTA_APPR_EMPID='" + item.appr_id + "' ";
-                                    sql += " and DTA_TRAVEL_EMPID='" + item.emp_id + "' ";
+                                    //sql += " where dh_code = '" + value.doc_id + "' ";
+                                    //sql += " and DTA_TYPE='" + item.type + "' ";
+                                    //sql += " and DTA_APPR_EMPID='" + item.appr_id + "' ";
+                                    //sql += " and DTA_TRAVEL_EMPID='" + item.emp_id + "' ";
+                                    //sql += " and DTA_STATUS = 1 ";
+
+                                    sql += " where dh_code = :doc_id ";
+                                    sql += " and DTA_TYPE= :type ";
+                                    sql += " and DTA_APPR_EMPID= :appr_id ";
+                                    sql += " and DTA_TRAVEL_EMPID= :emp_id ";
                                     sql += " and DTA_STATUS = 1 ";
+
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("type", item.type, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("appr_id", item.appr_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("emp_id", item.emp_id, "char"));
 
                                     //DevFix 20211109 0000 กรณีที่ Line/CAP Revise   
                                     if (bstep_approver == true && approver_status_not_revise_old == false)
@@ -2286,7 +3037,8 @@ namespace top.ebiz.service.Service.Create_trip
                                     }
                                     else
                                     {
-                                        int result = context.Database.ExecuteSqlCommand(sql);
+                                        //int result = context.Database.ExecuteSqlCommand(sql);
+                                        int result = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                     }
 
                                 }
@@ -2352,13 +3104,28 @@ namespace top.ebiz.service.Service.Create_trip
                                     #endregion DevFix 20200914 1200 เพิ่ม position ของ apprver เช่น EVP = 1, SEVP = 2, CEO = 3
 
                                     if (appr_level == null) { appr_level = "0"; }
-                                    sql = "insert into BZ_DOC_TRAVELER_APPROVER (DH_CODE, DTA_ID, DTA_TYPE, DTA_APPR_EMPID ";
-                                    sql += " , DTA_TRAVEL_EMPID, DTA_REMARK, DTA_DOC_STATUS, DTA_UPDATE_TOKEN,DTA_APPR_LEVEL) ";
-                                    sql += " values (";
-                                    sql += " '" + value.doc_id + "', " + item.line_id + ", '" + item.type + "', '" + item.appr_id + "' ";
-                                    sql += ", '" + item.emp_id + "', '" + item.remark + "', " + s_next_status + ", '" + item.token_update + "' , '" + appr_level + "'  ";
-                                    sql += " ) ";
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    //sql = "insert into BZ_DOC_TRAVELER_APPROVER (DH_CODE, DTA_ID, DTA_TYPE, DTA_APPR_EMPID ";
+                                    //sql += " , DTA_TRAVEL_EMPID, DTA_REMARK, DTA_DOC_STATUS, DTA_UPDATE_TOKEN,DTA_APPR_LEVEL) ";
+                                    //sql += " values (";
+                                    //sql += " '" + value.doc_id + "', " + item.line_id + ", '" + item.type + "', '" + item.appr_id + "' ";
+                                    //sql += ", '" + item.emp_id + "', '" + item.remark + "', " + s_next_status + ", '" + item.token_update + "' , '" + appr_level + "'  ";
+                                    //sql += " ) ";
+                                    //context.Database.ExecuteSqlCommand(sql);
+                                    sql = "insert into BZ_DOC_TRAVELER_APPROVER (DH_CODE, DTA_ID, DTA_TYPE, DTA_APPR_EMPID, DTA_TRAVEL_EMPID, DTA_REMARK, DTA_DOC_STATUS, DTA_UPDATE_TOKEN,DTA_APPR_LEVEL) ";
+                                    sql += " values (:doc_id, :line_id, :type, :appr_id, :emp_id, :remark, :s_next_status, :token_update, :appr_level ) ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("line_id", item.line_id, "int"));
+                                    parameters.Add(context.ConvertTypeParameter("type", item.type, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("appr_id", item.appr_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("emp_id", item.emp_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("remark", item.remark, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("s_next_status", s_next_status, "int"));
+                                    parameters.Add(context.ConvertTypeParameter("token_update", item.token_update, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("appr_level", appr_level, "char"));
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                                 }
 
                             }
@@ -2369,24 +3136,47 @@ namespace top.ebiz.service.Service.Create_trip
                                 else
                                 {
                                     // update inaction ในกรณีที่เป็นรายการที่อยู่บนหน้าจอ
-                                    sql = "update BZ_DOC_TRAVELER_APPROVER set DTA_STATUS=0 ";
-                                    sql += " where DH_CODE='" + value.doc_id + "' ";
-                                    sql += " and DTA_STATUS = 1 and  ( DTA_UPDATE_TOKEN != '" + tokenUpdate + "' or DTA_UPDATE_TOKEN is null) ";
+                                    //sql = "update BZ_DOC_TRAVELER_APPROVER set DTA_STATUS=0 ";
+                                    //sql += " where DH_CODE='" + value.doc_id + "' ";
+                                    //sql += " and DTA_STATUS = 1 and  ( DTA_UPDATE_TOKEN != '" + tokenUpdate + "' or DTA_UPDATE_TOKEN is null) ";
+                                    //// ทำเฉพาะที่ไปถึง level cap แล้ว
+                                    //if (dta_type_check == "2")
+                                    //{
+                                    //    sql += " and DTA_TYPE = 2 ";
+                                    //}
+                                    //context.Database.ExecuteSqlCommand(sql);
+
                                     // ทำเฉพาะที่ไปถึง level cap แล้ว
                                     if (dta_type_check == "2")
                                     {
-                                        sql += " and DTA_TYPE = 2 ";
+                                        sql = "update BZ_DOC_TRAVELER_APPROVER set DTA_STATUS=0 where DH_CODE= :doc_id and DTA_STATUS = 1 and  ( DTA_UPDATE_TOKEN != :tokenUpdate or DTA_UPDATE_TOKEN is null)  and DTA_TYPE = 2  ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("tokenUpdate", tokenUpdate, "char"));
+                                        context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                     }
-                                    context.Database.ExecuteSqlCommand(sql);
+
                                 }
 
                                 if (value.action.type == "3") { }
                                 else
                                 {
                                     //DevFix 20210714 0000 เพิ่มสถานะที่ Line/CAP --> 1:Draft , 2:Pendding , 3:Approve , 4:Revise , 5:Reject 
-                                    //update DTA_ACTION_STATUS 1, 4 to 2 
-                                    sql = "update BZ_DOC_TRAVELER_APPROVER set DTA_ACTION_STATUS = 2 ";
-                                    sql += " where DTA_ACTION_STATUS in (1,4) and DH_CODE='" + value.doc_id + "' ";
+                                    ////update DTA_ACTION_STATUS 1, 4 to 2 
+                                    //sql = "update BZ_DOC_TRAVELER_APPROVER set DTA_ACTION_STATUS = 2 ";
+                                    //sql += " where DTA_ACTION_STATUS in (1,4) and DH_CODE='" + value.doc_id + "' ";
+                                    //if (dta_type_check == "2")
+                                    //{
+                                    //    sql += " and DTA_TYPE = 2";
+                                    //}
+                                    //else
+                                    //{
+                                    //    sql += " and DTA_TYPE = 1";
+                                    //}
+                                    //context.Database.ExecuteSqlCommand(sql);
+
+                                    sql = "update BZ_DOC_TRAVELER_APPROVER set DTA_ACTION_STATUS = 2 where DTA_ACTION_STATUS in (1,4) and DH_CODE= :doc_id ";
                                     if (dta_type_check == "2")
                                     {
                                         sql += " and DTA_TYPE = 2";
@@ -2395,7 +3185,9 @@ namespace top.ebiz.service.Service.Create_trip
                                     {
                                         sql += " and DTA_TYPE = 1";
                                     }
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                 }
                             }
                             #endregion
@@ -2406,17 +3198,34 @@ namespace top.ebiz.service.Service.Create_trip
                                 if (prefix_old_doctype == "2")
                                 {
                                     // ???
-                                    context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                    //context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+
+                                    sql = @"update BZ_DOC_ACTION set action_status = 2 WHERE action_status = 1 and DH_CODE = :doc_id";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+
                                 }
                                 else if (prefix_old_doctype == "3")
                                 {
                                     //update กรณีที่มีการ revise กลับมา action_status ให้เป็น 2 เนื่องจากอาจจะมีกรณีที่ revise แล้ว ได้ line approve ใหม่ --> line approve เก่าไม่มีการส่งไป update ??? 
-                                    context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE doc_status < 30 and action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                    //context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE doc_status < 30 and action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                    sql = @"update BZ_DOC_ACTION set action_status = 2 WHERE doc_status < 30 and action_status = 1 and DH_CODE = :doc_id ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                 }
                                 else if (prefix_old_doctype == "4")
                                 {
                                     //update กรณีที่มีการ revise กลับมา action_status ให้เป็น 2 เนื่องจากอาจจะมีกรณีที่ revise แล้ว ได้ line approve ใหม่ --> line approve เก่าไม่มีการส่งไป update ??? 
-                                    context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE doc_status < 30 and action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                    //context.Database.ExecuteSqlCommand("update BZ_DOC_ACTION set action_status = 2 WHERE doc_status < 30 and action_status = 1 and DH_CODE = '" + value.doc_id + "'");
+                                    sql = @"update BZ_DOC_ACTION set action_status = 2 WHERE doc_status < 30 and action_status = 1 and DH_CODE = :doc_id";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
                                 }
 
                                 foreach (var item in tempEmpForAction)
@@ -2459,9 +3268,14 @@ namespace top.ebiz.service.Service.Create_trip
                             #endregion
 
                             //DevFix 20210718 0000 ปิด code นี้ เนื่องจาก มีข้อมูลค้างจากการ genarate ครั้งแรก
-                            sql = "delete from BZ_DOC_TRAVELER_APPROVER  ";
-                            sql += " where DH_CODE='" + value.doc_id + "' and DTA_DOC_STATUS is null  ";
-                            context.Database.ExecuteSqlCommand(sql);
+                            //sql = "delete from BZ_DOC_TRAVELER_APPROVER  ";
+                            //sql += " where DH_CODE='" + value.doc_id + "' and DTA_DOC_STATUS is null  ";
+                            //context.Database.ExecuteSqlCommand(sql);
+                            sql = "delete from BZ_DOC_TRAVELER_APPROVER where DH_CODE= :doc_id and DTA_DOC_STATUS is null  ";
+
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
 
                             context.SaveChanges();
                             transaction.Commit();
@@ -2499,6 +3313,19 @@ namespace top.ebiz.service.Service.Create_trip
 
                                         if (value.action.type == "3") { next_action_status = 23; }
 
+                                        //sql = @"  select distinct to_char(s.id) as id, case when substr(a.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,a.city_text as name2    
+                                        //             FROM bz_doc_traveler_expense a 
+                                        //             inner join BZ_DOC_HEAD h on h.dh_code=a.dh_code
+                                        //             inner join BZ_USERS U on a.DTE_Emp_Id = u.employeeid
+                                        //             left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
+                                        //             ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
+                                        //             and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
+                                        //             left join bz_master_country c on a.ct_id = c.ct_id
+                                        //             left join BZ_MASTER_PROVINCE p on a.PV_ID = p.PV_ID
+                                        //             WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 and a.dte_appr_status  = '" + next_action_status + "' " +
+                                        //             " order by s.id";
+                                        //var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+
                                         sql = @"  select distinct to_char(s.id) as id, case when substr(a.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,a.city_text as name2    
                                                      FROM bz_doc_traveler_expense a 
                                                      inner join BZ_DOC_HEAD h on h.dh_code=a.dh_code
@@ -2508,10 +3335,13 @@ namespace top.ebiz.service.Service.Create_trip
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
                                                      left join bz_master_country c on a.ct_id = c.ct_id
                                                      left join BZ_MASTER_PROVINCE p on a.PV_ID = p.PV_ID
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 and a.dte_appr_status  = '" + next_action_status + "' " +
-                                                     " order by s.id";
+                                                     WHERE a.dh_code = :doc_id and a.dte_status = 1 and a.dte_appr_status  = :next_action_status
+                                                     order by s.id";
 
-                                        var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("next_action_status", next_action_status, "char"));
+                                        var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                                         if (temp != null && temp.Count() > 0)
                                         {
@@ -2538,12 +3368,30 @@ namespace top.ebiz.service.Service.Create_trip
                                         if (value.action.type == "5") // submit
                                         {
                                             #region "#### SUBMIT ####" 
-                                            sql = "select EMPLOYEEID user_id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, b.email email ";
-                                            sql += " from BZ_USERS b ";
-                                            var userList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                            //sql = "select EMPLOYEEID user_id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, b.email email ";
+                                            //sql += " from BZ_USERS b ";
+                                            //var userList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
+                                            sql = "select EMPLOYEEID user_id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, b.email email from BZ_USERS b ";
+                                            parameters = new List<OracleParameter>();
+                                            //parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char")); 
+                                            var userList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                                             #region DevFix 20210806 0000 กรณีที่ไม่ใช่ admin ให้ตรวจสอบ emp ว่าเป็น traveler  
-                                            var emp_type = new List<SearchUserModel>();
+                                            //var emp_type = new List<SearchUserModel>();
+                                            //sql = @"select distinct to_char(t.user_type ) as user_type, t.emp_id as user_id
+                                            //     from ( 
+                                            //     select dh_code as doc_id, 2 as user_type, a.dta_appr_empid as emp_id
+                                            //     from  bz_doc_traveler_approver a where a.dta_type = 1 
+                                            //     )t
+                                            //     inner join (  
+                                            //     select dh_code as doc_id, 3 as user_type, a.dta_appr_empid as emp_id
+                                            //     from  bz_doc_traveler_approver a  where a.dta_type = 2  
+                                            //     )t1 on t.doc_id = t1.doc_id and t.emp_id = t1.emp_id
+                                            //     where t.doc_id = '" + value.doc_id + "' ";
+                                            //sql += " order by user_type desc ";
+                                            //emp_type = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
                                             sql = @"select distinct to_char(t.user_type ) as user_type, t.emp_id as user_id
                                                  from ( 
                                                  select dh_code as doc_id, 2 as user_type, a.dta_appr_empid as emp_id
@@ -2553,9 +3401,11 @@ namespace top.ebiz.service.Service.Create_trip
                                                  select dh_code as doc_id, 3 as user_type, a.dta_appr_empid as emp_id
                                                  from  bz_doc_traveler_approver a  where a.dta_type = 2  
                                                  )t1 on t.doc_id = t1.doc_id and t.emp_id = t1.emp_id
-                                                 where t.doc_id = '" + value.doc_id + "' ";
-                                            sql += " order by user_type desc ";
-                                            emp_type = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                                 where t.doc_id = :doc_id order by user_type desc ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var emp_type = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                                             #endregion DevFix 20210806 0000 กรณีที่ไม่ใช่ admin ให้ตรวจสอบ emp ว่าเป็น traveler 
 
@@ -2574,19 +3424,37 @@ namespace top.ebiz.service.Service.Create_trip
                                                 }
 
                                                 //DevFix 20210813 0000 เพิ่ม email เพื่อนำไปใช้ตอน cc
+                                                //sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2  
+                                                //         , b.employeeid as name3, b.orgname as name4
+                                                //         from BZ_DOC_TRAVELER_EXPENSE a left join bz_users b on a.DTE_EMP_ID = b.employeeid
+                                                //         left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
+                                                //         on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id  
+                                                //         where a.dh_code = '" + value.doc_id + "'  ";
+                                                //sql += @" and (a.dte_emp_id, a.dh_code) in (select distinct dta_travel_empid, dh_code from BZ_DOC_TRAVELER_APPROVER
+                                                //         where dta_type = " + dta_type + " and dta_appr_empid = '" + emp_select + "' ";
+
+                                                //if (next_topno == 4) { sql += @" and dte_cap_appr_status = 41 "; }
+                                                //sql += @" )";
+                                                //sql += @" order by s.id ";
+                                                //var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+
                                                 sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2  
                                                          , b.employeeid as name3, b.orgname as name4
                                                          from BZ_DOC_TRAVELER_EXPENSE a left join bz_users b on a.DTE_EMP_ID = b.employeeid
                                                          left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
                                                          on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id  
-                                                         where a.dh_code = '" + value.doc_id + "'  ";
-                                                sql += @" and (a.dte_emp_id, a.dh_code) in (select distinct dta_travel_empid, dh_code from BZ_DOC_TRAVELER_APPROVER
-                                                         where dta_type = " + dta_type + " and dta_appr_empid = '" + emp_select + "' ";
-                                                if (next_topno == 3) { }
-                                                else if (next_topno == 4) { sql += @" and dte_cap_appr_status = 41 "; }
-                                                sql += @" )";
-                                                sql += @" order by s.id ";
-                                                var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                         where a.dh_code = :doc_id 
+                                                         and (a.dte_emp_id, a.dh_code) in (select distinct dta_travel_empid, dh_code from BZ_DOC_TRAVELER_APPROVER
+                                                         where dta_type = :dta_type and dta_appr_empid = :emp_select ";
+                                                if (next_topno == 4) { sql += @" and dte_cap_appr_status = 41 "; }
+                                                sql += @" ) order by s.id ";
+
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("dta_type", dta_type, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("emp_select", emp_select, "char"));
+                                                var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                                 if (tempTravel != null)
                                                 {
                                                     foreach (var item in tempTravel)
@@ -2738,6 +3606,17 @@ namespace top.ebiz.service.Service.Create_trip
                                         {
                                             #region "#### REJECT ####"
                                             //DevFix 20210813 0000 เพิ่ม email เพื่อนำไปใช้ตอน cc  --> แต่ยังไม่เพิ่ม
+                                            //sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2 
+                                            //         , b.employeeid as name3, b.orgname as name4                           
+                                            //     from BZ_DOC_TRAVELER_EXPENSE a
+                                            //     inner join  bz_doc_traveler_approver c on a.dh_code = c.dh_code and  a.DTE_EMP_ID = c.dta_travel_empid and c.dta_type = 1 and c.dta_action_status in (5)
+                                            //     inner join bz_users b on a.DTE_EMP_ID = b.employeeid
+                                            //     left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
+                                            //     on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id  
+                                            //     where a.DTE_APPR_STATUS = 30 and a.dh_code = '" + value.doc_id + "' order by s.id ";
+
+                                            //var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+
                                             sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2 
                                                      , b.employeeid as name3, b.orgname as name4                           
                                                  from BZ_DOC_TRAVELER_EXPENSE a
@@ -2745,9 +3624,12 @@ namespace top.ebiz.service.Service.Create_trip
                                                  inner join bz_users b on a.DTE_EMP_ID = b.employeeid
                                                  left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
                                                  on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id  
-                                                 where a.DTE_APPR_STATUS = 30 and a.dh_code = '" + value.doc_id + "' order by s.id ";
+                                                 where a.DTE_APPR_STATUS = 30 and a.dh_code = :doc_id order by s.id ";
 
-                                            var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             if (tempTravel != null)
                                             {
                                                 foreach (var item in tempTravel)
@@ -2767,14 +3649,20 @@ namespace top.ebiz.service.Service.Create_trip
 
                                             var iNo = 1;
                                             sTravelerList = "<table>";
-                                            foreach (var item in tempTravel)
+                                            if (tempTravel != null)
                                             {
-                                                sTravelerList += " <tr>";
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                                sTravelerList += " </tr>";
-                                                iNo++;
+                                                if (tempTravel?.Count > 0)
+                                                {
+                                                    foreach (var item in tempTravel)
+                                                    {
+                                                        sTravelerList += " <tr>";
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                        sTravelerList += " </tr>";
+                                                        iNo++;
+                                                    }
+                                                }
                                             }
                                             sTravelerList += "</table>";
 
@@ -2784,12 +3672,30 @@ namespace top.ebiz.service.Service.Create_trip
                                         {
                                             #region "#### REVISE ####"
                                             //DevFix 20210813 0000 เพิ่ม email เพื่อนำไปใช้ตอน cc  
+                                            //sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2 
+                                            //         , b.employeeid as name3, b.orgname as name4  
+                                            //         from BZ_DOC_TRAVELER_EXPENSE a left join bz_users b on a.DTE_EMP_ID = b.employeeid 
+                                            //         left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
+                                            //         on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id
+                                            //         where a.dh_code = '" + value.doc_id + "'  ";
+                                            //if (pf_doc_id == "4")
+                                            //{
+                                            //    sql += @" and DTE_CAP_APPR_STATUS = 23";
+                                            //}
+                                            //else if (pf_doc_id == "3")
+                                            //{
+                                            //    sql += @" and DTE_APPR_STATUS = 23";
+                                            //}
+                                            //sql += @" order by s.id";
+
+                                            //var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+
                                             sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2 
                                                      , b.employeeid as name3, b.orgname as name4  
                                                      from BZ_DOC_TRAVELER_EXPENSE a left join bz_users b on a.DTE_EMP_ID = b.employeeid 
                                                      left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
                                                      on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id
-                                                     where a.dh_code = '" + value.doc_id + "'  ";
+                                                     where a.dh_code = :doc_id ";
                                             if (pf_doc_id == "4")
                                             {
                                                 sql += @" and DTE_CAP_APPR_STATUS = 23";
@@ -2800,7 +3706,11 @@ namespace top.ebiz.service.Service.Create_trip
                                             }
                                             sql += @" order by s.id";
 
-                                            var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+
                                             if (tempTravel != null)
                                             {
                                                 foreach (var item in tempTravel)
@@ -2809,11 +3719,22 @@ namespace top.ebiz.service.Service.Create_trip
                                                 }
                                             }
 
-                                            sql = "SELECT    nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email ";
-                                            sql += "FROM bz_users b WHERE employeeid='" + doc_head_search.DH_CREATE_BY + "' ";
-                                            var requestor = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                            //sql = "SELECT    nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email ";
+                                            //sql += "FROM bz_users b WHERE employeeid='" + doc_head_search.DH_CREATE_BY + "' ";
+                                            //var requestor = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
 
-                                            dataMail.mail_to = requestor[0].email ?? "";
+                                            sql = "SELECT    nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email ";
+                                            sql += "FROM bz_users b WHERE employeeid= :create_by_emp_id_select ";
+
+                                            var create_by_emp_id_select = doc_head_search.DH_CREATE_BY ?? "";
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("create_by_emp_id_select", create_by_emp_id_select, "char"));
+                                            var requestor = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                                            if (requestor != null && requestor?.Count > 0)
+                                            {
+                                                dataMail.mail_to = requestor[0].email ?? "";
+                                            }
                                             dataMail.mail_cc = admin_mail + on_behalf_of_mail;
 
                                             dataMail.mail_subject = value.doc_id + " :  Please revise your request for business travel.";// + User[0].user_name + "";
@@ -2826,14 +3747,17 @@ namespace top.ebiz.service.Service.Create_trip
 
                                             var iNo = 1;
                                             sTravelerList = "<table>";
-                                            foreach (var item in tempTravel)
+                                            if (tempTravel != null && tempTravel?.Count > 0)
                                             {
-                                                sTravelerList += " <tr>";
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                                sTravelerList += " </tr>";
-                                                iNo++;
+                                                foreach (var item in tempTravel)
+                                                {
+                                                    sTravelerList += " <tr>";
+                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                    sTravelerList += " </tr>";
+                                                    iNo++;
+                                                }
                                             }
                                             sTravelerList += "</table>";
 
@@ -2933,6 +3857,7 @@ namespace top.ebiz.service.Service.Create_trip
             bool newDocNo = false;
             string doc_status = "";
 
+            string user_name = "";
             string user_id = "";
             string user_role = "";
 
@@ -2946,18 +3871,17 @@ namespace top.ebiz.service.Service.Create_trip
                 return data;
             }
 
-
             //หน้าบ้านไม่ได้ส่ง approver id มาให้ใน  data.traveler_summary ทำให้ตรวจสอบข้อมูลไม่ได้ว่าตาราง BZ_DOC_TRAVELER_APPROVER 
             //กรณีที่มีข้อมูล traveler 1 คน เดินทางมากกว่า 1 รายการ ควร update status ไหน เช่นกรณีที่เป็นการ approve 1 reject 1 ตอนนี้อัฟเดตรายการท้ายสุด
             //ยิ่งถ้าเป็น admin เข้ามาทำรายการแทนจะไม่ทราบว่า traverler นั้นอยู่ภายใต้ approver
-            searchDocService ws_search = new searchDocService();
+            searchDocServices ws_search = new searchDocServices();
             DocDetail3Model value_load = new DocDetail3Model();
             value_load.token = value.token_login.ToString();
             value_load.id_doc = value.doc_id.ToString();
-            var out_load = ws_search.searchDetail3(value_load);
+            var out_load = ws_search.SearchDetail3(value_load);
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
                     var traveler_expen_load = context.BZ_DOC_TRAVELER_EXPENSE.Where(p => p.DH_CODE.Equals(value.doc_id)).ToList();
                     foreach (var item in value.traveler_summary)
@@ -2987,7 +3911,16 @@ namespace top.ebiz.service.Service.Create_trip
 
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                var Tel_Services_Team = "";
+                var Tel_Call_Center = "";
+                getTelServicesTeamCallCenter(ref Tel_Services_Team, ref Tel_Call_Center);
+
+                var iret = 0;
+                var doc_id = value.doc_id ?? "";
+                var token_login = value.token_login ?? "";
+
+                var parameters = new List<OracleParameter>();
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
                     var doc_head_search = context.BZ_DOC_HEAD.Find(value.doc_id);
                     if (doc_head_search == null)
@@ -2997,21 +3930,6 @@ namespace top.ebiz.service.Service.Create_trip
                         return data;
                     }
 
-
-                    #region DevFix 20200911 0000 
-                    var Tel_Services_Team = "";
-                    var Tel_Call_Center = "";
-                    sql = @" SELECT key_value as tel_services_team
-                                 from bz_config_data where lower(key_name) = lower('tel_services_team') and status = 1";
-                    var tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
-                    try { Tel_Services_Team = tellist[0].tel_services_team; } catch { }
-                    sql = @" SELECT key_value as tel_call_center 
-                                 from bz_config_data where lower(key_name) = lower('tel_call_center') and status = 1";
-                    tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
-                    try { Tel_Call_Center = tellist[0].tel_call_center; } catch { }
-                    #endregion DevFix 20200911 0000 
-
-
                     string admin_mail = "";
                     string requester_mail = "";
                     string requester_name = "";
@@ -3019,90 +3937,44 @@ namespace top.ebiz.service.Service.Create_trip
                     string traveler_mail = "";
                     string approver_mail = "";
 
-                    #region DevFix 20210729 0000 ส่งเมลแจ้งคนที่ Requester & On behalf of  &  cc initiator & admin
-                    sql = "SELECT    EMPLOYEEID user_id, EMAIL email FROM bz_users WHERE role_id = 1 ";
-                    var adminList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    if (adminList != null)
-                    {
-                        foreach (var item in adminList)
-                        {
-                            admin_mail += ";" + item.email ?? "";
-                        }
-                        if (admin_mail != "")
-                            admin_mail = ";" + admin_mail.Substring(1);
-                    }
+                    #region DevFix 20210729 0000 ส่งเมลแจ้งคนที่ Requester & On behalf of  &  cc initiator & admin 
+                    admin_mail = get_mail_group_admin(context);
+
                     //กรณีที่เป็น pmdv admin, pmsv_admin
                     admin_mail += mail_group_admin(context, "pmsv_admin");
-                    if (value.doc_id.IndexOf("T") > -1)
+                    if (doc_id.IndexOf("T") > -1)
                     {
                         admin_mail += mail_group_admin(context, "pmdv_admin");
                     }
 
-                    sql = @" SELECT EMPLOYEEID as user_id,  nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email FROM BZ_USERS b
-                                 WHERE EMPLOYEEID IN ( SELECT DH_CREATE_BY FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.doc_id + "')";
-                    var requesterList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    if (requesterList != null)
-                    {
-                        if (requesterList.Count > 0)
-                        {
-                            requester_mail = ";" + requesterList[0].email;
-                            requester_name = requesterList[0].user_name;
-                        }
-                    }
-                    sql = @" SELECT EMPLOYEEID user_id, EMAIL email FROM BZ_USERS 
-                                 WHERE EMPLOYEEID IN ( SELECT DH_BEHALF_EMP_ID FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.doc_id + "')";
-                    var behalfList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    if (behalfList != null)
-                    {
-                        if (behalfList.Count > 0)
-                        {
-                            on_behalf_of_mail = ";" + behalfList[0].email;
-                        }
-                    }
-                    sql = @"SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users
-                                     WHERE EMPLOYEEID in (select dh_initiator_empid from bz_doc_head where dh_code ='" + value.doc_id + "')  ";
-                    var initial = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    if (initial != null && initial.Count() > 0)
-                    {
-                        on_behalf_of_mail += ";" + initial[0].email;
-                    }
+                    get_mail_requester_in_doc(context, doc_id, ref requester_name, ref requester_mail, ref on_behalf_of_mail);
+
                     #endregion DevFix 20210729 0000 ส่งเมลแจ้งคนที่ Requester & On behalf of  &  cc initiator & admin 
 
                     //DevFix 20210527 0000 เพิ่มข้อมูล ประเภทใบงานเป็น 1:flow, 2:not flow, 3:training เก็บไว้ที่  BZ_DOC_HEAD.DH_TYPE_FLOW 
-                    sql = @"SELECT a.DH_TYPE_FLOW FROM BZ_DOC_HEAD a where a.DH_CODE ='" + value.doc_id + "'";
-                    var docHead = new List<DocList3Model>();
-                    docHead = context.Database.SqlQuery<DocList3Model>(sql).ToList();
+                    //sql = @"SELECT a.DH_TYPE_FLOW FROM BZ_DOC_HEAD a where a.DH_CODE ='" + value.doc_id + "'";
+                    //var docHead = new List<DocList3Model>();
+                    //docHead = context.Database.SqlQuery<DocList3Model>(sql).ToList();
+
+                    sql = @"SELECT a.DH_TYPE_FLOW FROM BZ_DOC_HEAD a where a.DH_CODE = :doc_id ";
+
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                    var docHead = context.DocList3ModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                     if (docHead != null)
                     {
                         if ((docHead[0].DH_TYPE_FLOW ?? "1") != "1") { type_flow = false; }
                     }
 
-                    using (DbContextTransaction transaction = context.Database.BeginTransaction())
+                    using (var transaction = context.Database.BeginTransaction())
                     {
-                        var login_empid = new List<SearchUserModel>();
-                        sql = "SELECT a.user_id, to_char(u.ROLE_ID) user_role ";
-                        sql += " , nvl(u.ENTITLE,'')||' '||u.ENFIRSTNAME||' '||u.ENLASTNAME user_name,nvl(u.ENTITLE,'')||' '||u.ENFIRSTNAME||' '||u.ENLASTNAME user_display, u.email email ";
-                        sql += "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid ";
-                        sql += " WHERE a.TOKEN_CODE ='" + value.token_login + "' ";
-                        login_empid = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                        if (login_empid != null && login_empid.Count() > 0)
-                        {
-                            user_id = login_empid[0].user_id ?? "";
-                            user_role = login_empid[0].user_role ?? "";
-                        }
+                        get_user_role_in_token_login(context, token_login, ref user_name, ref user_id, ref user_role);
 
-                        //กรณีที่เป็น pmdv admin, pmsv_admin
-                        admin_mail += mail_group_admin(context, "pmsv_admin");
-                        if (value.doc_id.IndexOf("T") > -1)
+                        if (doc_id.IndexOf("T") > -1)
                         {
-                            admin_mail += mail_group_admin(context, "pmdv_admin");
-
-                            sql = @" select emp_id as user_id from bz_data_manage where (pmsv_admin = 'true' or pmdv_admin = 'true') and emp_id = '" + user_id + "' ";
-                            var adminlist = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                            if (adminlist != null)
-                            {
-                                if (adminlist.Count > 0) { user_role = "1"; }
-                            }
+                            var user_role_select = user_role ?? "";
+                            user_role = get_role_admin_in_manage(context, user_id, user_role_select);
                         }
 
 
@@ -3139,85 +4011,95 @@ namespace top.ebiz.service.Service.Create_trip
                                 if (item.take_action != "true")
                                     continue;
 
-                                sql = "update BZ_DOC_TRAVELER_EXPENSE set ";
+                                //********************************************************
+                                var item_ref_id = item.ref_id ?? "";
+                                var item_traverler_id = item.traverler_id ?? "";
+                                var item_appr_id = item.appr_id ?? "";
+
+                                var action_remark = chkString(value.action.remark);
 
                                 //DevFix 20211018 0000 กรณีที่กดปึ่ม reject ให้ opt = false
-                                if (doc_status == "30")
-                                {
-                                    sql += " DTE_APPR_OPT='false' "; // true, false
-                                }
-                                else
-                                {
-                                    sql += " DTE_APPR_OPT='" + item.appr_status + "' "; // true, false
-                                }
+                                var item_appr_status = item.appr_status ?? "";
+                                if (doc_status == "30") { item_appr_status = "false"; }
 
-                                //sql += ", DTE_APPR_REMARK='" + chkString(item.appr_remark) + "' ";
                                 //DevFix 20210817 0000 update ข้อมูล  remark ที่เกิดจากการกดปุ่ม reject
-                                try
-                                {
-                                    item.appr_remark += "";
-                                    if (item.appr_remark.ToString() != "")
-                                    {
-                                        sql += ", DTE_APPR_REMARK='" + chkString(item.appr_remark) + "' ";
-                                    }
-                                    else
-                                    {
-                                        sql += ", DTE_APPR_REMARK='" + chkString(value.action.remark) + "' ";
-                                    }
-                                }
-                                catch { }
+                                var appr_remark = chkString(item.appr_remark) ?? action_remark;
 
+                                sql = "update BZ_DOC_TRAVELER_EXPENSE set DTE_APPR_OPT= :item_appr_status ";
+                                sql += ", DTE_APPR_REMARK= :appr_remark ";
                                 if (!string.IsNullOrEmpty(doc_status))
-                                    sql += " , DTE_APPR_STATUS = " + doc_status;
+                                {
+                                    sql += " , DTE_APPR_STATUS = :doc_status ";
+                                }
+                                sql += " where DTE_TOKEN = :item_ref_id ";
 
-                                sql += " where DTE_TOKEN = '" + item.ref_id + "' ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("item_appr_status", item_appr_status, "char"));
+                                parameters.Add(context.ConvertTypeParameter("appr_remark", appr_remark, "char"));
+                                if (!string.IsNullOrEmpty(doc_status))
+                                {
+                                    parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                }
+                                parameters.Add(context.ConvertTypeParameter("item_ref_id", item_ref_id, "char"));
+                                iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                if (iret > 0) { }
 
                                 var row_check = traveler_expen.Where(p => p.DTE_TOKEN.Equals(item.ref_id)).FirstOrDefault();
                                 if (row_check != null && row_check.DTE_EMP_ID != null)
                                 {
+                                    var travel_emp_id_select = row_check.DTE_EMP_ID ?? "";
 
                                     if (value.action.type == "2") // reject
                                     {
                                         sql = " update BZ_DOC_TRAVELER_APPROVER set ";
-                                        sql += " DTA_APPR_STATUS='" + item.appr_status + "' "; // true, false 
-                                        sql += " , DTA_APPR_REMARK= '" + value.action.remark + "'";
-
-                                        sql += " , DTA_DOC_STATUS= " + doc_status;
+                                        sql += " DTA_APPR_STATUS= :item_appr_status "; // true, false 
+                                        sql += " , DTA_APPR_REMARK= :action_remark ";
+                                        sql += " , DTA_DOC_STATUS= :doc_status";
                                         sql += " , DTA_ACTION_STATUS = '5' ";
-
-                                        sql += " where dh_code = '" + value.doc_id + "' ";
+                                        sql += " where dh_code = :doc_id ";
                                         sql += " and DTA_TYPE = '1' and DTA_STATUS = 1";
-                                        sql += " and DTA_TRAVEL_EMPID='" + row_check.DTE_EMP_ID + "' ";
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        sql += " and DTA_TRAVEL_EMPID= :travel_emp_id ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("item_appr_status", item_appr_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("action_remark", action_remark, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("travel_emp_id", travel_emp_id_select, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
 
                                     }
                                     else if (value.action.type == "3") // revise
                                     {
                                         doc_status = "23";
 
+                                        var action_status = (item_appr_status == "true" ? "4" : "5");
+
                                         sql = " update BZ_DOC_TRAVELER_APPROVER set ";
-                                        sql += " DTA_APPR_STATUS='" + item.appr_status + "' "; // true, false 
-                                        sql += " , DTA_DOC_STATUS= " + doc_status;
-                                        sql += " , DTA_APPR_REMARK= '" + value.action.remark + "'";
-
-                                        if (item.appr_status == "true")
-                                        {
-                                            sql += " , DTA_ACTION_STATUS = '4' ";
-                                        }
-                                        else
-                                        {
-                                            sql += " , DTA_ACTION_STATUS = '5' ";
-                                        }
-
-                                        sql += " where dh_code = '" + value.doc_id + "' ";
+                                        sql += " DTA_APPR_STATUS= :item_appr_status "; // true, false 
+                                        sql += " , DTA_APPR_REMARK= :action_remark ";
+                                        sql += " , DTA_DOC_STATUS= :doc_status ";
+                                        sql += " , DTA_ACTION_STATUS = :action_status ";
+                                        sql += " where dh_code = :doc_id ";
                                         sql += " and DTA_TYPE = '1' and DTA_STATUS = 1";
-                                        sql += " and DTA_TRAVEL_EMPID='" + row_check.DTE_EMP_ID + "' ";
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        sql += " and DTA_TRAVEL_EMPID= :travel_emp_id ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("item_appr_status", item_appr_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("action_remark", action_remark, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("action_status", action_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("travel_emp_id", travel_emp_id_select, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
+
+
                                     }
                                     else if (value.action.type == "4" || value.action.type == "5") // approve
                                     {
-                                        string user_id_select = user_id;
+                                        string user_id_select = user_id ?? "";
 
                                         #region DevFix 20211012 0000  item.ref_id เทียบได้กับ emp_id แต่เนื่องจาก traverler 1 คนมีได้มากกว่า 1 location ทำให้ข้อมูลผิด
 
@@ -3228,38 +4110,54 @@ namespace top.ebiz.service.Service.Create_trip
                                         {
                                             sql = " update BZ_DOC_TRAVELER_APPROVER set ";
                                             sql += " DTA_APPR_STATUS='true' ";
-                                            sql += " , DTA_DOC_STATUS= " + doc_status;
+                                            sql += " , DTA_DOC_STATUS= :doc_status ";
                                             sql += " , DTA_APPR_REMARK= ''";
                                             sql += " , DTA_ACTION_STATUS = '3' ";
-                                            sql += " where dh_code = '" + value.doc_id + "' ";
+                                            sql += " where dh_code = :doc_id ";
                                             sql += " and DTA_TYPE = '1' and DTA_STATUS = 1";
-                                            sql += " and DTA_TRAVEL_EMPID='" + item.traverler_id + "' ";
-                                            sql += " and DTA_APPR_EMPID='" + item.appr_id + "' ";
-                                            context.Database.ExecuteSqlCommand(sql);
+                                            sql += " and DTA_TRAVEL_EMPID= :item_traverler_id ";
+                                            sql += " and DTA_APPR_EMPID= :item_appr_id ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("item_traverler_id", item_traverler_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("item_appr_id", item_appr_id, "char"));
+                                            iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                            if (iret > 0) { }
+
                                         }
                                         else
                                         {
+
+                                            var action_status = (item_appr_status == "true" ? "3" : "5");
+                                            var approver_id_select = (user_role == "1" ? "" : user_id_select);
+
                                             sql = " update BZ_DOC_TRAVELER_APPROVER set ";
-                                            sql += " DTA_APPR_STATUS='" + item.appr_status + "' "; // true, false 
-                                            sql += " , DTA_DOC_STATUS= " + doc_status;
+                                            sql += " DTA_APPR_STATUS= :item_appr_status "; // true, false 
+                                            sql += " , DTA_DOC_STATUS= :doc_status";
                                             sql += " , DTA_APPR_REMARK= ''";
-                                            if (item.appr_status == "true")
-                                            {
-                                                sql += " , DTA_ACTION_STATUS = '3' ";
-                                            }
-                                            else
-                                            {
-                                                sql += " , DTA_ACTION_STATUS = '5' ";
-                                            }
-                                            sql += " where dh_code = '" + value.doc_id + "' ";
+                                            sql += " , DTA_ACTION_STATUS = :action_status ";
+                                            sql += " where dh_code = :doc_id ";
                                             sql += " and DTA_TYPE = '1' and DTA_STATUS = 1";
-                                            sql += " and DTA_TRAVEL_EMPID='" + row_check.DTE_EMP_ID + "' ";
+                                            sql += " and DTA_TRAVEL_EMPID= :travel_emp_id ";
+
                                             //DevFix 2020902 2336 เพิ่มเงื่อนไข approver
                                             if (user_role != "1")
                                             {
-                                                sql += " and DTA_APPR_EMPID='" + user_id_select + "' ";
+                                                sql += " and DTA_APPR_EMPID= :approver_id_select ";
                                             }
-                                            context.Database.ExecuteSqlCommand(sql);
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("item_appr_status", item_appr_status, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("action_status", doc_status, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("travel_emp_id", travel_emp_id_select, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("approver_id_select", approver_id_select, "char"));
+                                            iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                            if (iret > 0) { }
+
                                         }
 
                                         #endregion DevFix 20211012 0000  item.ref_id เทียบได้กับ emp_id แต่เนื่องจาก traverler 1 คนมีได้มากกว่า 1 location ทำให้ข้อมูลผิด 
@@ -3268,10 +4166,16 @@ namespace top.ebiz.service.Service.Create_trip
                                     //DevFix 20210618 0000 เพิ่มข้อมูล  dta_update_date
                                     sql = " update BZ_DOC_TRAVELER_APPROVER set ";
                                     sql += " DTA_UPDATE_DATE = sysdate ";
-                                    sql += " where dh_code = '" + value.doc_id + "' ";
+                                    sql += " where dh_code = :doc_id ";
                                     sql += " and DTA_TYPE = '1' and DTA_STATUS = 1";
-                                    sql += " and DTA_TRAVEL_EMPID='" + row_check.DTE_EMP_ID + "' ";
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    sql += " and DTA_TRAVEL_EMPID= :travel_emp_id ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("travel_emp_id", travel_emp_id_select, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
+
 
                                     var findData = traveler_approver_List.Where(p => p.DTA_TYPE == "1" && p.DTA_STATUS == 1
                                                                             && p.DTA_TRAVEL_EMPID.Equals(row_check.DTE_EMP_ID)).ToList();
@@ -3312,104 +4216,175 @@ namespace top.ebiz.service.Service.Create_trip
 
                             }
 
-                            if (value.action.type == "2") // reject
+                            var user_id_def = user_id ?? "";
+                            if (user_id_def != "")
                             {
-                                foreach (var item in approverList)
+                                if (value.action.type == "2") // reject
                                 {
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='" + item.user_id + "' ";
-                                    sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
-                                }
-                                if (user_role == "1") // admin
-                                {
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='admin' ";
-                                    sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
-                                }
+                                    foreach (var item in approverList)
+                                    {
+                                        var item_user_id = item.user_id ?? "";
 
-                                #region DevFix 20210726 0000 กรณีที่ Line reject เป็นคนเดียวกันกับ CAP ให้ update ACTION_STATUS = 2 ในตาราง BZ_DOC_ACTION ของ CAP   
+                                        sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id , ACTION_STATUS=2 ";
+                                        sql += " where dh_code= :doc_id and EMP_ID= :item_user_id ";
+                                        sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
 
-                                //approverList ข้อมูล 
-                                foreach (var item in approverList)
-                                {
-                                    sql = " update BZ_DOC_ACTION set ACTION_STATUS = 2 where ( select case when  ";
-                                    sql += " (select count(1) as x from BZ_DOC_ACTION where dh_code = '" + value.doc_id + "' and doc_status = 31 and  emp_id = '" + item.user_id + "') > 0";
-                                    sql += " and";
-                                    sql += " (select count(1) as x from BZ_DOC_ACTION where dh_code = '" + value.doc_id + "' and doc_status = 41 and  emp_id = '" + item.user_id + "') > 0 ";
-                                    sql += " then 1 else 0 end check_2_level from dual ) > 0 ";
-                                    sql += " and dh_code='" + value.doc_id + "' and EMP_ID='" + item.user_id + "' ";
-                                    sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
-                                }
-                                #endregion DevFix 20210726 0000 กรณีที่ Line reject เป็นคนเดียวกันกับ CAP ให้ update ACTION_STATUS = 2 ในตาราง BZ_DOC_ACTION ของ CAP   
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("user_id", user_id_def, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("item_user_id", item_user_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
 
-                            }
-                            else if (value.action.type == "3") // revise
-                            {
-                                foreach (var item in approverList)
-                                {
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='" + item.user_id + "' ";
-                                    sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
-                                }
-                                if (user_role == "1") // admin
-                                {
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='admin' ";
-                                    sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
-                                }
+                                    }
+                                    if (user_role == "1") // admin
+                                    {
+                                        sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id , ACTION_STATUS=2 ";
+                                        sql += " where dh_code= :doc_id and EMP_ID='admin' ";
+                                        sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
 
-                                sql = "delete from BZ_DOC_ACTION ";
-                                sql += " where DH_CODE = '" + value.doc_id + "' and DOC_STATUS=23 and EMP_ID='admin' and ACTION_STATUS=1 ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("user_id", user_id_def, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
+                                    }
 
-                                // เรื่องจะถูกส่งกลับไปที่ admin
-                                sql = "insert into BZ_DOC_ACTION (DA_TOKEN, DH_CODE, DOC_TYPE, DOC_STATUS, EMP_ID, TAB_NO, CREATED_DATE, UPDATED_DATE) ";
-                                sql += " values (";
-                                sql += " '" + Guid.NewGuid().ToString() + "', '" + value.doc_id + "', '" + doc_head_search.DH_TYPE + "', " + doc_status + ", 'admin', 2, sysdate, sysdate ";
-                                sql += " ) ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                    #region DevFix 20210726 0000 กรณีที่ Line reject เป็นคนเดียวกันกับ CAP ให้ update ACTION_STATUS = 2 ในตาราง BZ_DOC_ACTION ของ CAP   
 
-                            }
-                            else if (value.action.type == "4" || value.action.type == "5") // approve
-                            {
-                                foreach (var item in approverList)
-                                {
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='" + item.user_id + "' ";
-                                    sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
-                                }
-                                if (user_role == "1") // ถ้าเป็น admin
-                                {
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='admin' ";
-                                    sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
-                                }
-
-                                #region DevFix 20201021 0000 กรณีที่ Line approve เป็นคนเดียวกันกับ CAP ให้ update ACTION_STATUS = 2 ในตาราง BZ_DOC_ACTION ของ CAP   
-                                //กรณีที่เป็น Line Apporve
-                                if (doc_status == "32")
-                                {
                                     //approverList ข้อมูล 
                                     foreach (var item in approverList)
                                     {
+                                        var item_user_id = item.user_id ?? "";
+
                                         sql = " update BZ_DOC_ACTION set ACTION_STATUS = 2 where ( select case when  ";
-                                        sql += " (select count(1) as x from BZ_DOC_ACTION where dh_code = '" + value.doc_id + "' and doc_status = 31 and  emp_id = '" + item.user_id + "') > 0";
+                                        sql += " (select count(1) as x from BZ_DOC_ACTION where dh_code = :doc_id and doc_status = 31 and  emp_id = :item_user_id ) > 0";
                                         sql += " and";
-                                        sql += " (select count(1) as x from BZ_DOC_ACTION where dh_code = '" + value.doc_id + "' and doc_status = 41 and  emp_id = '" + item.user_id + "') > 0 ";
+                                        sql += " (select count(1) as x from BZ_DOC_ACTION where dh_code = :doc_id and doc_status = 41 and  emp_id = :item_user_id ) > 0 ";
                                         sql += " then 1 else 0 end check_2_level from dual ) > 0 ";
-                                        sql += " and dh_code='" + value.doc_id + "' and EMP_ID='" + item.user_id + "' ";
+                                        sql += " and dh_code= :doc_id and EMP_ID= :item_user_id ";
                                         sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                        context.Database.ExecuteSqlCommand(sql);
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("item_user_id", item_user_id, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
                                     }
+                                    #endregion DevFix 20210726 0000 กรณีที่ Line reject เป็นคนเดียวกันกับ CAP ให้ update ACTION_STATUS = 2 ในตาราง BZ_DOC_ACTION ของ CAP   
+
                                 }
-                                #endregion DevFix 20201021 0000 กรณีที่ Line approve เป็นคนเดียวกันกับ CAP ให้ update ACTION_STATUS = 2 ในตาราง BZ_DOC_ACTION ของ CAP   
+                                else if (value.action.type == "3") // revise
+                                {
+                                    foreach (var item in approverList)
+                                    {
+                                        var item_user_id = item.user_id ?? "";
+
+                                        sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id , ACTION_STATUS=2 ";
+                                        sql += " where dh_code= :doc_id and EMP_ID= :item_user_id ";
+                                        sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
+
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("user_id", user_id_def, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("item_user_id", item_user_id, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
+                                    }
+
+                                    if (user_role == "1") // admin
+                                    {
+                                        sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id, ACTION_STATUS=2 ";
+                                        sql += " where dh_code= :doc_id and EMP_ID='admin' ";
+                                        sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("user_id", user_id_def, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
+                                    }
+
+                                    sql = "delete from BZ_DOC_ACTION where DH_CODE = :doc_id and DOC_STATUS=23 and EMP_ID='admin' and ACTION_STATUS=1 ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
+
+                                    // เรื่องจะถูกส่งกลับไปที่ admin
+                                    var token_action_new = Guid.NewGuid().ToString() ?? "";
+                                    var doc_head_type = doc_head_search.DH_TYPE ?? "";
+                                    sql = "insert into BZ_DOC_ACTION (DA_TOKEN, DH_CODE, DOC_TYPE, DOC_STATUS, EMP_ID, TAB_NO, CREATED_DATE, UPDATED_DATE) ";
+                                    sql += " values (:token_action_new , :doc_id, :doc_head_type, :doc_status, 'admin', 2, sysdate, sysdate ) ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("token_action_new", token_action_new, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("doc_head_type", doc_head_type, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
+
+                                }
+                                else if (value.action.type == "4" || value.action.type == "5") // approve
+                                {
+                                    foreach (var item in approverList)
+                                    {
+                                        var item_user_id = item.user_id ?? "";
+
+                                        sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                        sql += " where dh_code= :doc_id and EMP_ID= :item_user_id ";
+                                        sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("user_id", user_id_def, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("item_user_id", item_user_id, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
+                                    }
+                                    if (user_role == "1") // ถ้าเป็น admin
+                                    {
+                                        sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                        sql += " where dh_code= :doc_id and EMP_ID='admin' ";
+                                        sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("user_id", user_id_def, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { };
+                                    }
+
+                                    #region DevFix 20201021 0000 กรณีที่ Line approve เป็นคนเดียวกันกับ CAP ให้ update ACTION_STATUS = 2 ในตาราง BZ_DOC_ACTION ของ CAP   
+                                    //กรณีที่เป็น Line Apporve
+                                    if (doc_status == "32")
+                                    {
+                                        //approverList ข้อมูล 
+                                        foreach (var item in approverList)
+                                        {
+                                            var item_user_id = item.user_id ?? "";
+
+                                            sql = " update BZ_DOC_ACTION set ACTION_STATUS = 2 where ( select case when  ";
+                                            sql += " (select count(1) as x from BZ_DOC_ACTION where dh_code = :doc_id and doc_status = 31 and  emp_id = :item_user_id ) > 0";
+                                            sql += " and";
+                                            sql += " (select count(1) as x from BZ_DOC_ACTION where dh_code = :doc_id and doc_status = 41 and  emp_id = :item_user_id ) > 0 ";
+                                            sql += " then 1 else 0 end check_2_level from dual ) > 0 ";
+                                            sql += " and dh_code= :doc_id and EMP_ID= :item_user_id ";
+                                            sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("item_user_id", item_user_id, "char"));
+                                            iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                            if (iret > 0) { };
+
+                                        }
+                                    }
+                                    #endregion DevFix 20201021 0000 กรณีที่ Line approve เป็นคนเดียวกันกับ CAP ให้ update ACTION_STATUS = 2 ในตาราง BZ_DOC_ACTION ของ CAP   
+                                }
                             }
 
                             context.SaveChanges();
@@ -3421,15 +4396,27 @@ namespace top.ebiz.service.Service.Create_trip
                             sql = @" select count(1) as status_value
                                      from BZ_DOC_TRAVELER_APPROVER a
                                      where a.dta_type = 1 and a.dta_action_status in (1,2)
-                                     and a.dh_code = '" + value.doc_id + "'  ";
-                            var dataApporver_Def = context.Database.SqlQuery<allApproveModel>(sql).FirstOrDefault();
-                            if (dataApporver_Def.status_value == 0)
+                                     and a.dh_code = :doc_id  ";
+
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            var dataApporver_Def = context.AllApproveModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+                            if (dataApporver_Def != null && dataApporver_Def?.Count > 0)
                             {
-                                sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                sql += " where dh_code='" + value.doc_id + "' and EMP_ID='admin' ";
-                                sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
-                                context.Database.ExecuteSqlCommand(sql);
-                                context.SaveChanges();
+                                if (dataApporver_Def[0].status_value == 0)
+                                {
+                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id , ACTION_STATUS=2 ";
+                                    sql += " where dh_code= :doc_id and EMP_ID='admin' ";
+                                    sql += " and DOC_STATUS = 31 and ACTION_STATUS=1 ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("user_id", user_id_def, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { };
+
+                                    context.SaveChanges();
+                                }
                             }
                             #endregion DevFix 20210714 0000 กรณีที่ Line Action ครบทุกคนแล้วให้ update status ของ admin = 2
 
@@ -3440,7 +4427,7 @@ namespace top.ebiz.service.Service.Create_trip
 
                             if (value.action.type == "4" || value.action.type == "5" || value.action.type == "2")
                             {
-                                apprAllStatus = AllApproveLineApprover(value.doc_id, ref ret_doc_status);
+                                apprAllStatus = AllApproveLineApprover(doc_id, ref ret_doc_status);
                                 if (apprAllStatus)
                                 {
                                     sql = @" update BZ_DOC_TRAVELER_EXPENSE  
@@ -3452,14 +4439,22 @@ namespace top.ebiz.service.Service.Create_trip
                                              case when DTE_APPR_STATUS = 32 and DTE_APPR_OPT = 'true' then null else 
                                                 case when DTE_APPR_STATUS = 32 and DTE_APPR_OPT = 'false' then 'false' else (case when DTE_APPR_STATUS = 30 then 'false' end) end
                                              end
-                                             where DH_CODE = '" + value.doc_id + "' ";
-                                    context.Database.ExecuteSqlCommand(sql);
+                                             where DH_CODE = :doc_id ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { };
+
                                     context.SaveChanges();
                                 }
 
 
                                 foreach (var apprlist in traveler_approver_List)
                                 {
+                                    var item_travel_empid = apprlist.DTA_TRAVEL_EMPID ?? "";
+                                    var item_approver_empid = apprlist.DTA_APPR_EMPID ?? "";
+
                                     sql = @" update BZ_DOC_TRAVELER_EXPENSE set 
                                                      DTE_CAP_APPR_OPT = DTE_APPR_OPT 
                                                      ,DTE_CAP_APPR_STATUS = replace(DTE_APPR_STATUS,3,4)  
@@ -3467,10 +4462,16 @@ namespace top.ebiz.service.Service.Create_trip
                                                      select to_char(count(dta_type)) as action_status 
                                                      from (select distinct dta_type
                                                      from bz_doc_traveler_approver b
-                                                     where  dh_code = '" + value.doc_id + "' and dta_travel_empid = '" + apprlist.DTA_TRAVEL_EMPID + "'  and dta_appr_empid = '" + apprlist.DTA_APPR_EMPID + "' )t )>1 " +
-                                         @" and  DH_CODE = '" + value.doc_id + "' and DTE_EMP_ID = '" + apprlist.DTA_TRAVEL_EMPID + "' ";
+                                                     where  dh_code = :doc_id and dta_travel_empid = :item_travel_empid  and dta_appr_empid = :item_approver_empid )t )>1 " +
+                                         @" and  DH_CODE = :doc_id and DTE_EMP_ID = :item_travel_empid ";
 
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_travel_empid", item_travel_empid, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_approver_empid", item_approver_empid, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { };
+
                                     context.SaveChanges();
 
                                 }
@@ -3504,15 +4505,21 @@ namespace top.ebiz.service.Service.Create_trip
                                              left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s 
                                              on a.dh_code =s.dh_code and a.dta_travel_empid = s.dte_emp_id
                                              where a.dta_type = 1 and a.dta_action_status in (5) and a.dta_doc_status = 30
-                                             and a.dh_code ='" + value.doc_id + "' ";
+                                             and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
-                                        sql += @" and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += @" and a.dta_appr_empid = :user_id_def ";
                                     }
                                     sql += @" order by s.id ";
 
                                     traveler_mail = "";
-                                    var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    if (user_role != "1")
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    }
+                                    var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                     if (tempTravel != null)
                                     {
                                         foreach (var item in tempTravel)
@@ -3526,13 +4533,20 @@ namespace top.ebiz.service.Service.Create_trip
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 1 and a.dta_action_status in (5) and a.dta_doc_status = 40
-                                                 and a.dh_code = '" + value.doc_id + "' ";
+                                                 and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
-                                        sql += " and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += " and a.dta_appr_empid = :user_id_def ";
                                     }
                                     approver_mail = "";
-                                    var approvermailList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    if (user_role != "1")
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    }
+                                    var approvermailList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                     if (approvermailList != null)
                                     {
                                         if (approvermailList.Count > 0)
@@ -3566,10 +4580,14 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                    WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                        sql += " and a.dte_appr_status  = '" + doc_status + "' order by s.id";
-                                        var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                    WHERE a.dh_code = :doc_id and a.dte_status = 1 ";
+                                        sql += " and a.dte_appr_status  = :doc_status order by s.id";
 
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+
+                                        var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                         if (temp != null && temp.Count() > 0)
                                         {
                                             //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -3592,9 +4610,13 @@ namespace top.ebiz.service.Service.Create_trip
                                         sendEmailService mail = new sendEmailService();
                                         sendEmailModel dataMail = new sendEmailModel();
 
+                                        var doc_head_create_by = doc_head_search.DH_CREATE_BY ?? "";
                                         sql = "SELECT    nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email ";
-                                        sql += "FROM bz_users b WHERE employeeid='" + doc_head_search.DH_CREATE_BY + "' ";
-                                        var requestor = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                        sql += "FROM bz_users b WHERE employeeid= :doc_head_create_by";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_head_create_by", doc_id, "char"));
+                                        var requestor = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                                         //to : Requester, Traverler
                                         //cc : Super admin, Line Approval   
@@ -3607,21 +4629,24 @@ namespace top.ebiz.service.Service.Create_trip
                                         //sDear = "Dear " + requestor[0].user_name + ",";
                                         sDear = "Dear All,";
 
-                                        sDetail = "Your business travel request has been reject by " + login_empid[0].user_name + ". To view the details, click ";
-                                        sDetail += "<a href='" + (LinkLogin + "ii").Replace("###", value.doc_id) + "'>" + value.doc_id + "</a>";
+                                        sDetail = $"Your business travel request has been reject by {user_name}. To view the details, click ";
+                                        sDetail += $"<a href='{(LinkLogin + "ii").Replace("###", value.doc_id)}'>{doc_id}</a>";
 
                                         var iNo = 1;
-                                        sTravelerList = "<table>";
-                                        foreach (var item in tempTravel)
+                                        if (tempTravel != null && tempTravel?.Count > 0)
                                         {
-                                            sTravelerList += " <tr>";
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                            sTravelerList += " </tr>";
-                                            iNo++;
+                                            sTravelerList = "<table>";
+                                            foreach (var item in tempTravel)
+                                            {
+                                                sTravelerList += " <tr>";
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                sTravelerList += " </tr>";
+                                                iNo++;
+                                            }
+                                            sTravelerList += "</table>";
                                         }
-                                        sTravelerList += "</table>";
 
                                         #region set mail
                                         try
@@ -3691,8 +4716,10 @@ namespace top.ebiz.service.Service.Create_trip
                                         #region get status 
                                         try
                                         {
-                                            sql = @" select to_char(DH_DOC_STATUS) as name1 from BZ_DOC_HEAD a where a.DH_CODE = '" + value.doc_id + "'  ";
-                                            var tempStatus_Def = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                            sql = @" select to_char(DH_DOC_STATUS) as name1 from BZ_DOC_HEAD a where a.DH_CODE = :doc_id  ";
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var tempStatus_Def = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                             if (tempStatus_Def != null && tempStatus_Def.Count() > 0)
                                             {
                                                 status_next_step_def = tempStatus_Def[0].name1.ToString();
@@ -3714,10 +4741,13 @@ namespace top.ebiz.service.Service.Create_trip
                                                      inner join bz_users b on a.dta_travel_empid = b.employeeid left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s
                                                      on a.dh_code =s.dh_code and a.dta_travel_empid = s.dte_emp_id  
                                                      where a.dta_type = 2 and a.dta_action_status in (3) and a.dta_doc_status = 42
-                                                     and a.dh_code ='" + value.doc_id + "' order by s.id ";
+                                                     and a.dh_code = :doc_id order by s.id ";
 
                                             traveler_mail = "";
-                                            var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             if (tempTravel != null)
                                             {
                                                 foreach (var item in tempTravel)
@@ -3727,19 +4757,24 @@ namespace top.ebiz.service.Service.Create_trip
                                             }
                                             #endregion traveler mail in doc
                                             #region approver mail in doc 
+                                            approver_mail = "";
+
                                             sql = @" select distinct b.email                       
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 2 and a.dta_action_status in (3) and a.dta_doc_status = 42
-                                                 and a.dh_code = '" + value.doc_id + "' ";
+                                                 and a.dh_code = :doc_id ";
                                             sql += @" union ";
                                             sql += @" select distinct b.email                       
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 1 and a.dta_action_status in (3) and a.dta_doc_status = 32
-                                                 and a.dh_code = '" + value.doc_id + "' ";
-                                            approver_mail = "";
-                                            var approvermailList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                                 and a.dh_code = :doc_id ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var approvermailList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             if (approvermailList != null)
                                             {
                                                 if (approvermailList.Count > 0)
@@ -3772,9 +4807,14 @@ namespace top.ebiz.service.Service.Create_trip
                                                       left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                    WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                                sql += " and a.dte_appr_status  = '" + status_next_step_def + "' order by s.id ";
-                                                var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                    WHERE a.dh_code = :doc_id and a.dte_status = 1 ";
+                                                sql += " and a.dte_appr_status  = :status_next_step_def order by s.id ";
+
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("status_next_step_def", status_next_step_def, "char"));
+                                                var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                                 if (temp != null && temp.Count() > 0)
                                                 {
                                                     //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -3808,7 +4848,9 @@ namespace top.ebiz.service.Service.Create_trip
                                                 {
                                                     string file_name = file_Approval_Output_form;// @"temp\APPROVAL_FORM_OT21060025_2021100410233333.xlsx";
 
-                                                    string _FolderMailAttachments = System.Configuration.ConfigurationManager.AppSettings["FilePathServerApp"].ToString();//d:\Ebiz2\Ebiz_App\
+                                                    //string _FolderMailAttachments = System.Configuration.ConfigurationManager.AppSettings["FilePathServerApp"].ToString();//d:\Ebiz2\Ebiz_App\
+                                                    string _FolderMailAttachments = configApp.GetStringFromAppSettings("FilePathServerApp") ?? "";
+
                                                     string mail_attachments = _FolderMailAttachments + file_name;
                                                     dataMail.mail_attachments = mail_attachments;
                                                 }
@@ -3905,8 +4947,12 @@ namespace top.ebiz.service.Service.Create_trip
                                                     var traveler_name = itemTravel.name1;
                                                     sql = @" select distinct emp_id  from bz_data_passport 
                                                      where default_type = 'true' and to_date(passport_date_expire,'dd Mon yyyy') >= sysdate
-                                                     and emp_id = '" + traveler_id + "' ";
-                                                    var dataPassport = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                     and emp_id = :traveler_id";
+
+                                                    parameters = new List<OracleParameter>();
+                                                    parameters.Add(context.ConvertTypeParameter("traveler_id", traveler_id, "char"));
+                                                    var dataPassport = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                                     if (dataPassport != null)
                                                     {
                                                         if (dataPassport.Count > 0) { bValidPassportExpire = false; }
@@ -3921,10 +4967,17 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                                    sql += " and a.dte_cap_appr_status  = '" + doc_status + "' ";
-                                                    sql += " and a.DTE_Emp_Id = '" + traveler_id + "' order by s.id ";
-                                                    var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                     WHERE a.dh_code = :doc_id and a.dte_status = 1 ";
+                                                    sql += " and a.dte_cap_appr_status  = :doc_status ";
+                                                    sql += " and a.DTE_Emp_Id = :traveler_id order by s.id ";
+
+                                                    parameters = new List<OracleParameter>();
+                                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                    parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                                    parameters.Add(context.ConvertTypeParameter("traveler_id", traveler_id, "char"));
+                                                    var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+
                                                     if (temp != null && temp.Count() > 0)
                                                     {
                                                         //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -4052,9 +5105,14 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                                sql += " and a.dte_appr_status  = '" + doc_status + "' order by s.id";
-                                                var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                     WHERE a.dh_code = :doc_id and a.dte_status = 1 ";
+                                                sql += " and a.dte_appr_status  = :doc_status order by s.id";
+
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                                var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                                 if (temp != null && temp.Count() > 0)
                                                 {
                                                     //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -4080,157 +5138,165 @@ namespace top.ebiz.service.Service.Create_trip
                                                 sql = @" select distinct nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name
                                                          , b.email email ,a.dta_appr_empid as user_id
                                                          from bz_doc_traveler_approver a left join bz_users b on a.dta_appr_empid = b.employeeid
-                                                         where a.dh_code = '" + value.doc_id + "' and a.dta_type = 2 and a.dta_action_status in (2) ";
+                                                         where a.dh_code = :doc_id and a.dta_type = 2 and a.dta_action_status in (2) ";
 
                                                 //DevFix 20210810 0000 กรณีที่ Line Approve แล้วให้ส่งไปยัง CAP ลำดับแรกของแต่ละ traveler
                                                 sql += @" and (a.dta_appr_level, a.dta_travel_empid) in (
                                                          select min(dta_appr_level),dta_travel_empid from bz_doc_traveler_approver a1
-                                                         where a1.dh_code = '" + value.doc_id + "' and a1.dta_type = 2 and a1.dta_action_status in (2) group by dta_travel_empid )";
-                                                var empapp = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                                         where a1.dh_code = :doc_id and a1.dta_type = 2 and a1.dta_action_status in (2) group by dta_travel_empid )";
 
-                                                //20221025 =>test เนื่องจากกรณีที่ cap 1 รายการจะมีข้อมูล mail to 
-                                                var sql_check = sql;
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                var empapp = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
-                                                foreach (var iemp in empapp)
+                                                if (empapp != null && empapp?.Count > 0)
                                                 {
-                                                    sql_check += "=>user_id:" + iemp.user_id;
-                                                    sql_check += "=>email:" + iemp.email;
 
-                                                    #region approver mail in doc 
-                                                    sql = @" select distinct b.email                       
+                                                    //20221025 =>test เนื่องจากกรณีที่ cap 1 รายการจะมีข้อมูล mail to 
+                                                    var sql_check = sql;
+
+                                                    foreach (var iemp in empapp)
+                                                    {
+                                                        sql_check += "=>user_id:" + iemp.user_id;
+                                                        sql_check += "=>email:" + iemp.email;
+
+                                                        #region approver mail in doc 
+                                                        approver_mail = "";
+
+                                                        sql = @" select distinct b.email                       
                                                              from bz_doc_traveler_approver a
                                                              inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                              where a.dta_type = 1 and a.dta_action_status in (3) and a.dta_doc_status = 32
-                                                             and a.dh_code = '" + value.doc_id + "' ";
-                                                    //if (user_role != "1")
-                                                    //{
-                                                    //    sql += " and a.dta_appr_empid ='" + iemp.user_id + "' ";
-                                                    //}
-                                                    approver_mail = "";
-                                                    var approvermailList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                                                    if (approvermailList != null)
-                                                    {
-                                                        if (approvermailList.Count > 0)
+                                                             and a.dh_code = :doc_id ";
+
+                                                        parameters = new List<OracleParameter>();
+                                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                        var approvermailList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                                                        if (approvermailList != null)
                                                         {
-                                                            for (int m = 0; m < approvermailList.Count; m++)
+                                                            if (approvermailList.Count > 0)
                                                             {
-                                                                //if (approver_mail != "") { approver_mail += ";"; }
-                                                                approver_mail += ";" + approvermailList[m].email;
+                                                                for (int m = 0; m < approvermailList.Count; m++)
+                                                                {
+                                                                    //if (approver_mail != "") { approver_mail += ";"; }
+                                                                    approver_mail += ";" + approvermailList[m].email;
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                    #endregion approver mail in doc
+                                                        #endregion approver mail in doc
 
 
-                                                    #region traveler mail in doc
-                                                    //DevFix 20210813 0000 กรณีที่ Line Approve แล้วให้ส่งไปยัง CAP 
-                                                    //หา traveler ที่อยู่ ภายใต้ CAP 
-                                                    sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2 
+                                                        #region traveler mail in doc
+                                                        traveler_mail = "";
+
+                                                        //DevFix 20210813 0000 กรณีที่ Line Approve แล้วให้ส่งไปยัง CAP 
+                                                        //หา traveler ที่อยู่ ภายใต้ CAP 
+                                                        sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2 
                                                              , b.employeeid as name3, b.orgname as name4                      
                                                              from bz_doc_traveler_approver a
                                                              inner join bz_users b on a.dta_travel_empid = b.employeeid
                                                              left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s
                                                              on a.dh_code =s.dh_code and a.dta_travel_empid = s.dte_emp_id 
                                                              where a.dta_type = 2 and (a.dta_doc_status in (41) and a.dta_action_status = 2)
-                                                             and a.dh_code ='" + value.doc_id + "' ";
-                                                    //if (user_role != "1")
-                                                    //{
-                                                    sql += @" and a.dta_appr_empid ='" + iemp.user_id + "' ";
-                                                    //}
-                                                    sql += @" order by s.id";
+                                                             and a.dh_code = :doc_id and a.dta_appr_empid = :item_approver_emp_id order by s.id";
 
-                                                    traveler_mail = "";
-                                                    var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
-                                                    if (tempTravel != null)
-                                                    {
+                                                        var item_approver_emp_id = iemp.user_id ?? "";
+                                                        parameters = new List<OracleParameter>();
+                                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                        parameters.Add(context.ConvertTypeParameter("item_approver_emp_id", item_approver_emp_id, "char"));
+                                                        var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                                                        if (tempTravel != null)
+                                                        {
+                                                            foreach (var item in tempTravel)
+                                                            {
+                                                                traveler_mail += ";" + item.name2;
+                                                            }
+                                                        }
+                                                        #endregion traveler mail in doc
+                                                        //to : CAP Approval
+                                                        //cc : Line Approval, Super admin, Requester, Traveller
+
+                                                        dataMail.mail_to = iemp.email ?? "";
+                                                        dataMail.mail_cc = approver_mail + admin_mail + requester_mail + on_behalf_of_mail + traveler_mail;
+                                                        dataMail.mail_subject = value.doc_id + " : Please approve business travel request as CAP.";
+
+                                                        sDear = "Dear " + iemp.user_name + ",";
+
+                                                        sDetail = "Please approve business travel request as CAP. To view the details, click ";
+                                                        sDetail += "<a href='" + LinkLogin.Replace("/i", "/cap").Replace("###", value.doc_id) + "'>" + value.doc_id + "</a>";
+
+                                                        var iNo = 1;
+                                                        sTravelerList = "<table>";
                                                         foreach (var item in tempTravel)
                                                         {
-                                                            traveler_mail += ";" + item.name2;
+                                                            sTravelerList += " <tr>";
+                                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                            sTravelerList += " </tr>";
+                                                            iNo++;
                                                         }
-                                                    }
-                                                    #endregion traveler mail in doc
-                                                    //to : CAP Approval
-                                                    //cc : Line Approval, Super admin, Requester, Traveller
+                                                        sTravelerList += "</table>";
 
-                                                    dataMail.mail_to = iemp.email ?? "";
-                                                    dataMail.mail_cc = approver_mail + admin_mail + requester_mail + on_behalf_of_mail + traveler_mail;
-                                                    dataMail.mail_subject = value.doc_id + " : Please approve business travel request as CAP.";
+                                                        #region set mail
+                                                        try
+                                                        {
+                                                            sReasonRejected = "";
+                                                            //if (value.action.type == "2") { sReasonRejected = "Reason Rejected : " + value.action.remark; }
+                                                            //else if (value.action.type == "3") { sReasonRejected = "Reason Revised : " + value.action.remark; }
+                                                        }
+                                                        catch { }
 
-                                                    sDear = "Dear " + iemp.user_name + ",";
-
-                                                    sDetail = "Please approve business travel request as CAP. To view the details, click ";
-                                                    sDetail += "<a href='" + LinkLogin.Replace("/i", "/cap").Replace("###", value.doc_id) + "'>" + value.doc_id + "</a>";
-
-                                                    var iNo = 1;
-                                                    sTravelerList = "<table>";
-                                                    foreach (var item in tempTravel)
-                                                    {
-                                                        sTravelerList += " <tr>";
-                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                                        sTravelerList += " </tr>";
-                                                        iNo++;
-                                                    }
-                                                    sTravelerList += "</table>";
-
-                                                    #region set mail
-                                                    try
-                                                    {
-                                                        sReasonRejected = "";
-                                                        //if (value.action.type == "2") { sReasonRejected = "Reason Rejected : " + value.action.remark; }
-                                                        //else if (value.action.type == "3") { sReasonRejected = "Reason Revised : " + value.action.remark; }
-                                                    }
-                                                    catch { }
-
-                                                    dataMail.mail_body = @"<span lang='en-US'>";
-                                                    dataMail.mail_body += "<div>";
-                                                    dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sDear + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sDetail + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sTitle + "</span></font></div>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sBusinessDate + "</span></font></div>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sLocation + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
-                                                    dataMail.mail_body += "     <span style='font-size:15pt;'>Traveler List : " + sTravelerList + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    if (sReasonRejected != "")
-                                                    {
-                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
-                                                        dataMail.mail_body += "     " + sReasonRejected + "</font></div>";
+                                                        dataMail.mail_body = @"<span lang='en-US'>";
+                                                        dataMail.mail_body += "<div>";
+                                                        dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sDear + "</span></font></div>";
                                                         dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sDetail + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sTitle + "</span></font></div>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sBusinessDate + "</span></font></div>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sLocation + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
+                                                        dataMail.mail_body += "     <span style='font-size:15pt;'>Traveler List : " + sTravelerList + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        if (sReasonRejected != "")
+                                                        {
+                                                            dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
+                                                            dataMail.mail_body += "     " + sReasonRejected + "</font></div>";
+                                                            dataMail.mail_body += "     <br>";
+                                                        }
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     If you have any question please contact Business Travel Services Team (Tel. " + Tel_Services_Team + ").";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     For the application assistance, please contact PTT Digital Call Center (Tel. " + Tel_Call_Center + ").";
+                                                        dataMail.mail_body += "     </span></font></div>";
+
+                                                        dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     Best Regards,";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     Business Travel Services Team (PMSV)";
+                                                        dataMail.mail_body += "     </span></font></div>";
+
+                                                        dataMail.mail_body += "</div>";
+                                                        dataMail.mail_body += "</span>";
+
+                                                        ////20221025 =>test เนื่องจากกรณีที่ cap 1 รายการจะมีข้อมูล mail to
+                                                        //dataMail.mail_body += sql_check;
+
+                                                        mail.sendMail(dataMail);
+                                                        #endregion set mail
+
                                                     }
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     If you have any question please contact Business Travel Services Team (Tel. " + Tel_Services_Team + ").";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     For the application assistance, please contact PTT Digital Call Center (Tel. " + Tel_Call_Center + ").";
-                                                    dataMail.mail_body += "     </span></font></div>";
-
-                                                    dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     Best Regards,";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     Business Travel Services Team (PMSV)";
-                                                    dataMail.mail_body += "     </span></font></div>";
-
-                                                    dataMail.mail_body += "</div>";
-                                                    dataMail.mail_body += "</span>";
-
-                                                    ////20221025 =>test เนื่องจากกรณีที่ cap 1 รายการจะมีข้อมูล mail to
-                                                    //dataMail.mail_body += sql_check;
-
-                                                    mail.sendMail(dataMail);
-                                                    #endregion set mail
-
                                                 }
-
 
                                             }
                                             catch (Exception ex)
@@ -4246,6 +5312,7 @@ namespace top.ebiz.service.Service.Create_trip
                                 else if (value.action.type == "3") // revise
                                 {
                                     #region traveler mail in doc
+                                    traveler_mail = "";
                                     sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2   
                                              , b.employeeid as name3, b.orgname as name4                    
                                              from bz_doc_traveler_approver a
@@ -4253,15 +5320,21 @@ namespace top.ebiz.service.Service.Create_trip
                                              left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s
                                              on a.dh_code =s.dh_code and a.dta_travel_empid = s.dte_emp_id  
                                              where a.dta_type = 1 and a.dta_action_status in (4) and a.dta_doc_status = 23
-                                             and a.dh_code ='" + value.doc_id + "' ";
+                                             and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
-                                        sql += @" and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += @" and a.dta_appr_empid = :user_id_def ";
                                     }
                                     sql += @" order by s.id ";
 
-                                    traveler_mail = "";
-                                    var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    if (user_role != "1")
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    }
+                                    var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                     if (tempTravel != null)
                                     {
                                         foreach (var item in tempTravel)
@@ -4271,17 +5344,25 @@ namespace top.ebiz.service.Service.Create_trip
                                     }
                                     #endregion traveler mail in doc
                                     #region approver mail in doc 
+                                    approver_mail = "";
                                     sql = @" select distinct b.email                       
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 1 and a.dta_action_status in (4) and a.dta_doc_status = 23
-                                                 and a.dh_code = '" + value.doc_id + "' ";
+                                                 and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
-                                        sql += " and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += " and a.dta_appr_empid = :user_id_def ";
                                     }
-                                    approver_mail = "";
-                                    var approvermailList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    if (user_role != "1")
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    }
+                                    var approvermailList = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                     if (approvermailList != null)
                                     {
                                         if (approvermailList.Count > 0)
@@ -4308,19 +5389,18 @@ namespace top.ebiz.service.Service.Create_trip
                                         if (doc_head_search.DH_TYPE == "local" ||
                                             doc_head_search.DH_TYPE == "localtraining")
                                         {
-                                            //DevFix 20210713 0000 แก้ไขดึงข้อมูล Location จาก BZ_DOC_TRAVELER_EXPENSE.CITY_TEXT
-                                            //sql = " select a.CITY_TEXT name1, a.CITY_TEXT name2 ";
-                                            //sql += " from BZ_DOC_TRAVELER_EXPENSE a";
-                                            //sql += " where a.dh_code = '" + value.doc_id + "' ";
-
+                                            //DevFix 20210713 0000 แก้ไขดึงข้อมูล Location จาก BZ_DOC_TRAVELER_EXPENSE.CITY_TEXT 
                                             sql = @" select distinct to_char(s.id) as id, a.CITY_TEXT name1, a.CITY_TEXT name2
                                                   from BZ_DOC_TRAVELER_EXPENSE a
                                                   left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                   ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                   and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                  where a.dh_code = '" + value.doc_id + "' order by s.id ";
+                                                  where a.dh_code = :doc_id order by s.id ";
 
-                                            var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             if (temp != null && temp.Count() > 0)
                                             {
                                                 //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -4342,18 +5422,17 @@ namespace top.ebiz.service.Service.Create_trip
                                         }
                                         else
                                         {
-                                            //sql = @" select b.ct_name name1, c.ctn_name name2
-                                            //         from BZ_DOC_COUNTRY a left join BZ_MASTER_COUNTRY b on a.ct_id = b.ct_id
-                                            //         left join bz_master_continent c on b.ctn_id = c.ctn_id 
-                                            //         where a.dh_code = '" + value.doc_id + "' and no = 1 ";
-
                                             sql = @" select distinct to_char(s.id) as id, b.ct_name name1, c.ctn_name name2 
                                                          from BZ_DOC_COUNTRY a 
                                                          left join (select min(dte_id) as id, dh_code, ct_id from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ct_id) s on a.dh_code = s.dh_code and a.ct_id = s.ct_id  
                                                          left join BZ_MASTER_COUNTRY b on a.ct_id = b.ct_id
                                                          left join bz_master_continent c on b.ctn_id = c.ctn_id 
-                                                         where a.dh_code = '" + value.doc_id + "' and no = 1  order by s.id ";
-                                            var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                         where a.dh_code = :doc_id and no = 1  order by s.id ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             if (temp != null && temp.Count() > 0)
                                             {
                                                 //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -4377,33 +5456,44 @@ namespace top.ebiz.service.Service.Create_trip
                                         sendEmailService mail = new sendEmailService();
                                         sendEmailModel dataMail = new sendEmailModel();
 
-                                        sql = "SELECT    nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email ";
-                                        sql += "FROM bz_users b WHERE employeeid='" + login_empid[0].user_id + "' ";
-                                        var user_active_doc = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                        sql = "SELECT nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email ";
+                                        sql += " FROM bz_users b WHERE employeeid= :user_id_def ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                        var user_active_doc = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                                        var revise_user_display_name = "";
+                                        if (user_active_doc != null && user_active_doc?.Count > 0)
+                                        {
+                                            revise_user_display_name = user_active_doc[0].user_name ?? "";
+                                        }
 
                                         dataMail.mail_to = admin_mail ?? "";
                                         dataMail.mail_cc = requester_mail + on_behalf_of_mail;
 
-                                        dataMail.mail_subject = value.doc_id + " :  The business travel request has been required to revise by " + user_active_doc[0].user_name + "";
+                                        dataMail.mail_subject = value.doc_id + " :  The business travel request has been required to revise by " + revise_user_display_name + "";
 
                                         sDear = "Dear All,";
 
-                                        sDetail = "Your business travel request has been revise by " + user_active_doc[0].user_name + ". To view the details, click ";
+                                        sDetail = "Your business travel request has been revise by " + revise_user_display_name + ". To view the details, click ";
                                         sDetail += "<a href='" + (LinkLogin + "i").Replace("###", value.doc_id) + "'>" + value.doc_id + "</a>";
 
                                         var iNo = 1;
-                                        sTravelerList = "<table>";
-                                        foreach (var item in tempTravel)
+                                        if (tempTravel != null && tempTravel?.Count > 0)
                                         {
-                                            sTravelerList += " <tr>";
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                            sTravelerList += " </tr>";
-                                            iNo++;
+                                            sTravelerList = "<table>";
+                                            foreach (var item in tempTravel)
+                                            {
+                                                sTravelerList += " <tr>";
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                sTravelerList += " </tr>";
+                                                iNo++;
+                                            }
+                                            sTravelerList += "</table>";
                                         }
-                                        sTravelerList += "</table>";
-
                                         #region set mail
                                         try
                                         {
@@ -4496,10 +5586,10 @@ namespace top.ebiz.service.Service.Create_trip
             bool newDocNo = false;
             string doc_status = "";
 
+            string user_name = "";
             string user_id = "";
             string user_role = "";
 
-            string sql = "";
             var data = new ResultModel();
 
 
@@ -4518,7 +5608,13 @@ namespace top.ebiz.service.Service.Create_trip
 
             try
             {
-                using (TOPEBizEntities context = new TOPEBizEntities())
+                var parameters = new List<OracleParameter>();
+                var sql = "";
+                var doc_id = value.doc_id ?? "";
+                var token_login = value.token_login ?? "";
+                var iret = 0;
+
+                using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
                 {
                     var doc_head_search = context.BZ_DOC_HEAD.Find(value.doc_id);
                     if (doc_head_search == null)
@@ -4531,20 +5627,19 @@ namespace top.ebiz.service.Service.Create_trip
                     #region DevFix 20200911 0000 
                     var Tel_Services_Team = "";
                     var Tel_Call_Center = "";
-                    sql = @" SELECT key_value as tel_services_team
-                                 from bz_config_data where lower(key_name) = lower('tel_services_team') and status = 1";
-                    var tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
-                    try { Tel_Services_Team = tellist[0].tel_services_team; } catch { }
-                    sql = @" SELECT key_value as tel_call_center 
-                                 from bz_config_data where lower(key_name) = lower('tel_call_center') and status = 1";
-                    tellist = context.Database.SqlQuery<TelephoneModel>(sql).ToList();
-                    try { Tel_Call_Center = tellist[0].tel_call_center; } catch { }
+
+                    getTelServicesTeamCallCenter(ref Tel_Services_Team, ref Tel_Call_Center);
+
                     #endregion DevFix 20200911 0000 
 
                     #region DevFix 20210527 0000 เพิ่มข้อมูลไฟล์แนบ
+
                     var imaxid_docfile = 1;
                     sql = @"SELECT to_char( nvl(max(DF_ID),0)+1) as DF_ID , null as DH_CODE, null as DF_NAME, null as DF_PATH, null as DF_REMARK  FROM  BZ_DOC_FILE ";
-                    var maxid_docfile = context.Database.SqlQuery<DocFileListModel>(sql).ToList();
+                    parameters = new List<OracleParameter>();
+                   var maxid_docfile = context.DocFileListModelList.FromSqlRaw(sql, parameters.ToArray()).ToList(); 
+                
+
                     if (maxid_docfile != null && maxid_docfile.Count() > 0)
                     {
                         imaxid_docfile = Convert.ToInt32(maxid_docfile[0].DF_ID);
@@ -4560,95 +5655,36 @@ namespace top.ebiz.service.Service.Create_trip
                     string approver_mail = "";
 
                     #region DevFix 20210729 0000 ส่งเมลแจ้งคนที่ Requester & On behalf of  &  cc initiator & admin
-                    sql = "SELECT    EMPLOYEEID user_id, EMAIL email FROM bz_users WHERE role_id = 1 ";
-                    var adminList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    if (adminList != null)
-                    {
-                        foreach (var item in adminList)
-                        {
-                            admin_mail += ";" + item.email ?? "";
-                        }
-                        if (admin_mail != "")
-                            admin_mail = ";" + admin_mail.Substring(1);
-                    }
+                    admin_mail = get_mail_group_admin(context);
+
                     //กรณีที่เป็น pmdv admin, pmsv_admin
                     admin_mail += mail_group_admin(context, "pmsv_admin");
-                    if (value.doc_id.IndexOf("T") > -1)
+                    if (doc_id.IndexOf("T") > -1)
                     {
                         admin_mail += mail_group_admin(context, "pmdv_admin");
                     }
+                    get_mail_requester_in_doc(context, doc_id, ref requester_name, ref requester_mail, ref on_behalf_of_mail);
 
-                    sql = @" SELECT EMPLOYEEID as user_id,  nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name, EMAIL email FROM BZ_USERS b
-                                 WHERE EMPLOYEEID IN ( SELECT DH_CREATE_BY FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.doc_id + "')";
-                    var requesterList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    if (requesterList != null)
-                    {
-                        if (requesterList.Count > 0)
-                        {
-                            requester_mail = ";" + requesterList[0].email;
-                            requester_name = requesterList[0].user_name;
-                        }
-                    }
-
-                    sql = @" SELECT EMPLOYEEID user_id, EMAIL email FROM BZ_USERS 
-                                 WHERE EMPLOYEEID IN ( SELECT DH_BEHALF_EMP_ID FROM  BZ_DOC_HEAD WHERE DH_CODE = '" + value.doc_id + "')";
-                    var behalfList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    if (behalfList != null)
-                    {
-                        if (behalfList.Count > 0)
-                        {
-                            on_behalf_of_mail = ";" + behalfList[0].email;
-                        }
-                    }
-                    sql = @"SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users
-                                     WHERE EMPLOYEEID in (select dh_initiator_empid from bz_doc_head where dh_code ='" + value.doc_id + "')  ";
-                    var initial = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                    if (initial != null && initial.Count() > 0)
-                    {
-                        on_behalf_of_mail += ";" + initial[0].email;
-                    }
                     #endregion DevFix 20210729 0000 ส่งเมลแจ้งคนที่ Requester & On behalf of  &  cc initiator & admin 
 
                     //DevFix 20210527 0000 เพิ่มข้อมูล ประเภทใบงานเป็น 1:flow, 2:not flow, 3:training เก็บไว้ที่  BZ_DOC_HEAD.DH_TYPE_FLOW 
-                    sql = @"SELECT a.DH_TYPE_FLOW FROM BZ_DOC_HEAD a where a.DH_CODE ='" + value.doc_id + "'";
-                    var docHead = new List<DocList3Model>();
-                    docHead = context.Database.SqlQuery<DocList3Model>(sql).ToList();
-                    if (docHead != null)
+                    if ((doc_head_search.DH_TYPE_FLOW ?? "1") != "1") { type_flow = false; }
+
+
+                    using (var transaction = context.Database.BeginTransaction())
                     {
-                        if ((docHead[0].DH_TYPE_FLOW ?? "1") != "1") { type_flow = false; }
-                    }
+                        get_user_role_in_token_login(context, token_login, ref user_name, ref user_id, ref user_role);
 
-                    using (DbContextTransaction transaction = context.Database.BeginTransaction())
-                    {
-                        var login_empid = new List<SearchUserModel>();
-                        sql = "SELECT  a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ";
-                        sql += " , nvl(u.ENTITLE,'')||' '||u.ENFIRSTNAME||' '||u.ENLASTNAME user_name, nvl(u.ENTITLE,'')||' '||u.ENFIRSTNAME||' '||u.ENLASTNAME user_display, u.email email ";
-                        sql += "FROM bz_login_token a left join bz_users u on a.user_id=u.employeeid ";
-                        sql += " WHERE a.TOKEN_CODE ='" + value.token_login + "' ";
-                        login_empid = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                        if (login_empid != null && login_empid.Count() > 0)
+                        if (doc_id.IndexOf("T") > -1)
                         {
-                            user_id = login_empid[0].user_id ?? "";
-                            user_role = login_empid[0].user_role ?? "";
+                            var user_role_select = user_role ?? "";
+                            user_role = get_role_admin_in_manage(context, user_id, user_role_select);
                         }
-
-                        //กรณีที่เป็น pmdv admin, pmsv_admin
-                        admin_mail += mail_group_admin(context, "pmsv_admin");
-                        if (value.doc_id.IndexOf("T") > -1)
-                        {
-                            admin_mail += mail_group_admin(context, "pmdv_admin");
-
-                            sql = @" select emp_id as user_id from bz_data_manage where (pmsv_admin = 'true' or pmdv_admin = 'true') and emp_id = '" + user_id + "' ";
-                            var adminlist = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-                            if (adminlist != null)
-                            {
-                                if (adminlist.Count > 0) { user_role = "1"; }
-                            }
-                        }
-
 
                         try
                         {
+                            var user_id_def = user_id ?? "";
+
                             doc_head_search.DH_AFTER_TRIP_OPT1 = retCheckValue(value.after_trip.opt1 ?? "");
                             doc_head_search.DH_AFTER_TRIP_OPT2 = retCheckValue(value.after_trip.opt2.status ?? "");
                             doc_head_search.DH_AFTER_TRIP_OPT3 = retCheckValue(value.after_trip.opt3.status ?? "");
@@ -4681,12 +5717,12 @@ namespace top.ebiz.service.Service.Create_trip
 
                             #endregion DevFix 20211012 0000  item.ref_id เทียบได้กับ emp_id แต่เนื่องจาก traverler 1 คนมีได้มากกว่า 1 location ทำให้ข้อมูลผิด
 
+
                             foreach (var item in value.traveler_summary)
                             {
                                 sql = "";
                                 if (item.take_action != "true")
                                     continue;
-
 
                                 //ตรวจสอบว่า ถ้าเป็นการ approve traveler 1 คน แล้วมีการยกเลิก 1 รายการ อนุมัติ 1 รายการ ต้อง stamp เป็น อนุมัติ ในตาราง BZ_DOC_TRAVELER_APPROVER
                                 //ตรวจสอบว่า เป็น traveler 1 คน แล้วมีมากกว่า 1 รายการหรือไม่
@@ -4709,89 +5745,100 @@ namespace top.ebiz.service.Service.Create_trip
 
                                 }
 
+                                var action_remark = chkString(value.action.remark) ?? "";
+
+                                var item_ref_id = item.ref_id ?? "";
+                                var item_appr_status = item.appr_status ?? "";
+                                var item_appr_remark = chkString(item.appr_remark) ?? "";
+                                var cap_approver_opt = (doc_status == "40" ? "false" : item_appr_status);
+                                var cap_approver_remark = (action_remark == "" ? action_remark : item_appr_remark);
+
                                 sql = "update BZ_DOC_TRAVELER_EXPENSE set ";
-                                //DevFix 20211018 0000 กรณีที่กดปึ่ม reject ให้ opt = false
-                                if (doc_status == "40")
-                                {
-                                    sql += " DTE_CAP_APPR_OPT='false' "; // true, false
-                                }
-                                else
-                                {
-                                    sql += " DTE_CAP_APPR_OPT='" + item.appr_status + "' "; // true, false
-                                }
-                                //sql += ", DTE_CAP_APPR_REMARK='" + chkString(item.appr_remark) + "' ";
+                                //DevFix 20211018 0000 กรณีที่กดปึ่ม reject ให้ opt = false 
+                                sql += " DTE_CAP_APPR_OPT= :cap_approver_opt ";
                                 //DevFix 20210817 0000 update ข้อมูล  remark ที่เกิดจากการกดปุ่ม reject
-                                try
-                                {
-                                    item.appr_remark += "";
-                                    if (item.appr_remark.ToString() != "")
-                                    {
-                                        sql += ", DTE_CAP_APPR_REMARK='" + chkString(item.appr_remark) + "' ";
-                                    }
-                                    else
-                                    {
-                                        sql += ", DTE_CAP_APPR_REMARK='" + chkString(value.action.remark) + "' ";
-                                    }
-                                }
-                                catch { }
+                                sql += ", DTE_CAP_APPR_REMARK= :cap_approver_remark ";
+                                sql += " , DTE_CAP_APPR_STATUS = :doc_status ";
+                                sql += " where DTE_TOKEN = :item_ref_id ";
 
-                                sql += " , DTE_CAP_APPR_STATUS = " + doc_status;
-
-                                sql += " where DTE_TOKEN = '" + item.ref_id + "' ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("cap_approver_opt", cap_approver_opt, "char"));
+                                parameters.Add(context.ConvertTypeParameter("cap_approver_remark", cap_approver_remark, "char"));
+                                parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                parameters.Add(context.ConvertTypeParameter("item_ref_id", item_ref_id, "char"));
+                                iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                if (iret > 0) { }
 
                                 var row_check = traveler_expen.Where(p => p.DTE_TOKEN.Equals(item.ref_id)).FirstOrDefault();
                                 if (row_check != null && row_check.DTE_EMP_ID != null)
                                 {
+                                    var travel_emp_id_select = row_check.DTE_EMP_ID ?? "";
                                     if (value.action.type == "2") // reject
                                     {
                                         //doc_status = "30";
                                         sql = " update BZ_DOC_TRAVELER_APPROVER set ";
-                                        sql += " DTA_APPR_STATUS='" + item.appr_status + "' "; // true, false 
-                                        sql += " , DTA_APPR_REMARK= '" + value.action.remark + "'";
-                                        sql += " , DTA_DOC_STATUS= " + doc_status;
+                                        sql += " DTA_APPR_STATUS= :item_appr_status "; // true, false 
+                                        sql += " , DTA_APPR_REMARK= :action_remark ";
+                                        sql += " , DTA_DOC_STATUS= :doc_status";
                                         sql += " , DTA_ACTION_STATUS = '5' ";
-                                        sql += " where dh_code = '" + value.doc_id + "' ";
+                                        sql += " where dh_code = :doc_id ";
                                         sql += " and DTA_TYPE = '2' and DTA_STATUS = 1";
-                                        sql += " and DTA_TRAVEL_EMPID='" + row_check.DTE_EMP_ID + "' ";
+                                        sql += " and DTA_TRAVEL_EMPID= :travel_emp_id_select ";
 
                                         //DevFix 20200827 1640 แก้ไขเพิ่มเงื่อนไข EMPID CAP ที่ action 
                                         if (user_role != "1")
                                         {
-                                            sql += " and DTA_APPR_EMPID ='" + user_id + "' ";
+                                            sql += " and DTA_APPR_EMPID = :user_id_def ";
                                         }
 
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("item_appr_status", item_appr_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("action_remark", action_remark, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("travel_emp_id_select", travel_emp_id_select, "char"));
+                                        if (user_role != "1")
+                                        {
+                                            parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                        }
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
                                     }
                                     else if (value.action.type == "3") // revise
 
                                     {
                                         doc_status = "23";
+                                        var action_status_select = (item_appr_status == "true" ? "4" : "5");
 
                                         sql = " update BZ_DOC_TRAVELER_APPROVER set ";
-                                        sql += " DTA_APPR_STATUS='" + item.appr_status + "' "; // true, false 
-                                        sql += " , DTA_APPR_REMARK= '" + value.action.remark + "'";
-                                        sql += " , DTA_DOC_STATUS= " + doc_status;
-                                        if (item.appr_status == "true")
-                                        {
-                                            sql += " , DTA_ACTION_STATUS = '4' ";
-                                        }
-                                        else
-                                        {
-                                            sql += " , DTA_ACTION_STATUS = '5' ";
-                                        }
+                                        sql += " DTA_APPR_STATUS= :item_appr_status "; // true, false 
+                                        sql += " , DTA_APPR_REMARK= :action_remark ";
+                                        sql += " , DTA_DOC_STATUS= :doc_status ";
+                                        sql += " , DTA_ACTION_STATUS = :action_status_select ";
 
-                                        sql += " where dh_code = '" + value.doc_id + "' ";
+                                        sql += " where dh_code = :doc_id ";
                                         sql += " and DTA_TYPE = '2' and DTA_STATUS = 1";
-                                        sql += " and DTA_TRAVEL_EMPID='" + row_check.DTE_EMP_ID + "' ";
+                                        sql += " and DTA_TRAVEL_EMPID= :travel_emp_id_select ";
 
                                         //DevFix 20200827 1640 แก้ไขเพิ่มเงื่อนไข EMPID CAP ที่ action 
                                         if (user_role != "1")
                                         {
-                                            sql += " and DTA_APPR_EMPID ='" + user_id + "' ";
+                                            sql += " and DTA_APPR_EMPID = :user_id_def ";
                                         }
 
-                                        context.Database.ExecuteSqlCommand(sql);
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("item_appr_status", item_appr_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("action_remark", action_remark, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("action_status_select", action_status_select, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("travel_emp_id_select", travel_emp_id_select, "char"));
+                                        if (user_role != "1")
+                                        {
+                                            parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                        }
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
                                     }
 
                                     else if (value.action.type == "4" || value.action.type == "5") // approve
@@ -4799,38 +5846,52 @@ namespace top.ebiz.service.Service.Create_trip
                                         ////DevFix 20211012 0000  item.ref_id เทียบได้กับ emp_id แต่เนื่องจาก traverler 1 คนมีได้มากกว่า 1 location ทำให้ข้อมูลผิด
                                         //if (item.appr_status == sbCheckApprovList)
                                         //{
+                                        var action_status_select = ((item.appr_status == "true" || sbCheckApprovList == "true") ? "3" : "5");
+
                                         sql = " update BZ_DOC_TRAVELER_APPROVER set ";
-                                        sql += " DTA_APPR_STATUS='" + item.appr_status + "' "; // true, false 
+                                        sql += " DTA_APPR_STATUS= :item_appr_status "; // true, false 
                                         sql += " , DTA_APPR_REMARK= ''";
-                                        sql += " , DTA_DOC_STATUS= " + doc_status;
-                                        if (item.appr_status == "true" || sbCheckApprovList == "true")
-                                        {
-                                            sql += " , DTA_ACTION_STATUS = '3' ";
-                                        }
-                                        else
-                                        {
-                                            sql += " , DTA_ACTION_STATUS = '5' ";
-                                        }
-                                        sql += " where dh_code = '" + value.doc_id + "' ";
+                                        sql += " , DTA_DOC_STATUS= :doc_status ";
+                                        sql += " , DTA_ACTION_STATUS = :action_status_select ";
+                                        sql += " where dh_code = :doc_id ";
                                         sql += " and DTA_TYPE = '2' and DTA_STATUS = 1";
-                                        sql += " and DTA_TRAVEL_EMPID='" + row_check.DTE_EMP_ID + "' ";
+                                        sql += " and DTA_TRAVEL_EMPID= :travel_emp_id_select ";
 
                                         //DevFix 20200827 1640 แก้ไขเพิ่มเงื่อนไข EMPID CAP ที่ action 
                                         if (user_role != "1")
                                         {
-                                            sql += " and DTA_APPR_EMPID ='" + user_id + "' ";
+                                            sql += " and DTA_APPR_EMPID = :user_id_def ";
                                         }
-                                        context.Database.ExecuteSqlCommand(sql);
+
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("item_appr_status", item_appr_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("action_status_select", action_status_select, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("travel_emp_id_select", travel_emp_id_select, "char"));
+                                        if (user_role != "1")
+                                        {
+                                            parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                        }
+                                        iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                        if (iret > 0) { }
+
                                         //}
                                     }
 
                                     //DevFix 20210618 0000 เพิ่มข้อมูล  dta_update_date 
                                     sql = " update BZ_DOC_TRAVELER_APPROVER set ";
                                     sql += " DTA_UPDATE_DATE = sysdate ";
-                                    sql += " where dh_code = '" + value.doc_id + "' ";
+                                    sql += " where dh_code = :doc_id ";
                                     sql += " and DTA_TYPE = '2' and DTA_STATUS = 1";
-                                    sql += " and DTA_TRAVEL_EMPID='" + row_check.DTE_EMP_ID + "' ";
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    sql += " and DTA_TRAVEL_EMPID= :travel_emp_id_select ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("travel_emp_id_select", travel_emp_id_select, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
 
 
                                     //DevFix 20200827 1640 แก้ไขเพิ่มเงื่อนไข EMPID CAP ที่ action 
@@ -4893,90 +5954,164 @@ namespace top.ebiz.service.Service.Create_trip
                             {
                                 foreach (var item in approverList)
                                 {
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='" + item.user_id + "' ";
+
+                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                    sql += " where dh_code= :doc_id and EMP_ID= :item_user_id ";
                                     sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
+
+                                    var item_user_id = item.user_id ?? "";
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_user_id", item_user_id, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
+
                                 }
                                 if (user_role == "1")
                                 {
-                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='admin' ";
+                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                    sql += " where dh_code= :doc_id and EMP_ID= :item_user_id ";
                                     sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_user_id", "admin", "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
                                 }
                             }
                             else if (value.action.type == "3") // revise
                             {
                                 foreach (var item in approverList)
                                 {
-                                    sql = " update BZ_DOC_ACTION set  ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='" + item.user_id + "' ";
+                                    sql = " update BZ_DOC_ACTION set  ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                    sql += " where dh_code= :doc_id and EMP_ID= :item_user_id ";
                                     sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
+
+                                    var item_user_id = item.user_id ?? "";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_user_id", item_user_id, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
                                 }
                                 if (user_role == "1")
                                 {
-                                    sql = " update BZ_DOC_ACTION set  ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='admin' ";
+                                    sql = " update BZ_DOC_ACTION set  ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                    sql += " where dh_code= :doc_id and EMP_ID='admin' ";
                                     sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_user_id", "admin", "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
                                 }
 
-                                sql = "delete from BZ_DOC_ACTION ";
-                                sql += " where DH_CODE = '" + value.doc_id + "' and DOC_STATUS=23 and EMP_ID='admin' and ACTION_STATUS=1 ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                sql = "delete from BZ_DOC_ACTION where DH_CODE = :doc_id and DOC_STATUS=23 and EMP_ID='admin' and ACTION_STATUS=1 ";
+
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                if (iret > 0) { }
 
                                 sql = "insert into BZ_DOC_ACTION (DA_TOKEN, DH_CODE, DOC_TYPE, DOC_STATUS, EMP_ID, TAB_NO, CREATED_DATE, UPDATED_DATE) ";
-                                sql += " values (";
-                                sql += " '" + Guid.NewGuid().ToString() + "', '" + value.doc_id + "', '" + doc_head_search.DH_TYPE + "', " + doc_status + ", 'admin', 2, sysdate, sysdate ";
-                                sql += " ) ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                sql += " values (:item_token, :doc_id, :doc_head_type, :doc_status, 'admin', 2, sysdate, sysdate ) ";
+
+                                var item_token = Guid.NewGuid().ToString();
+                                var doc_head_type = doc_head_search.DH_TYPE;
+
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("item_token", item_token, "char"));
+                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                parameters.Add(context.ConvertTypeParameter("doc_head_type", doc_head_type, "char"));
+                                parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                if (iret > 0) { }
 
                             }
                             else if (value.action.type == "4" || value.action.type == "5") // approve
                             {
                                 foreach (var item in approverList)
                                 {
-                                    sql = " update BZ_DOC_ACTION set  ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='" + item.user_id + "' ";
+                                    sql = " update BZ_DOC_ACTION set  ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                    sql += " where dh_code= :doc_id and EMP_ID= :item_user_id ";
                                     sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
+
+                                    var item_user_id = item.user_id ?? "";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_user_id", item_user_id, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
                                 }
                                 if (user_role == "1")
                                 {
-                                    sql = " update BZ_DOC_ACTION set  ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                    sql += " where dh_code='" + value.doc_id + "' and EMP_ID='admin' ";
+                                    sql = " update BZ_DOC_ACTION set  ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                    sql += " where dh_code= :doc_id and EMP_ID= :item_user_id ";
                                     sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                    context.Database.ExecuteSqlCommand(sql);
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_user_id", "admin", "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
                                 }
                             }
 
 
                             #region DevFix 20210527 0000 file
-                            //http://TBKC-DAPPS-05.thaioil.localnet/ebiz
-                            string ServerPath_API = System.Configuration.ConfigurationManager.AppSettings["ServerPath_API"].ToString();
-                            //http://TBKC-DAPPS-05.thaioil.localnet/ebiz/file/LB21050027/
-                            var file_path = ServerPath_API + @"/file/" + value.doc_id + @"/";
+                            ////http://TBKC-DAPPS-05.thaioil.localnet/ebiz
+                            //string ServerPath_API = System.Configuration.ConfigurationManager.AppSettings["ServerPath_API"].ToString();
+                            ////http://TBKC-DAPPS-05.thaioil.localnet/ebiz/file/LB21050027/
+                            //var file_path = ServerPath_API + @"/file/" + value.doc_id + @"/";
 
-                            //  d:/EBiz2/EBiz_Api/temp/ 
-                            var _path_temp = System.Web.HttpContext.Current.Server.MapPath("~" + @"/temp/" + value.doc_id + @"/");
-                            var _path_file = System.Web.HttpContext.Current.Server.MapPath("~" + @"/file/" + value.doc_id + @"/");
+                            ////  d:/EBiz2/EBiz_Api/temp/ 
+                            //var _path_temp = System.Web.HttpContext.Current.Server.MapPath("~" + @"/temp/" + value.doc_id + @"/");
+                            //var _path_file = System.Web.HttpContext.Current.Server.MapPath("~" + @"/file/" + value.doc_id + @"/");
+
+                            // การสร้างเส้นทางไปยัง temp directory -->??? เดียวต้องเอามาจาก table เพื่อลดความเสี่ยงจาก scan
+                            string ServerPath_API = configApp.GetStringFromAppSettings("ServerPath_API") ?? "";
+                            var file_path = $"{ServerPath_API}/file/{doc_id}/";
+                            var _path_temp = Path.Combine(Directory.GetCurrentDirectory(), "temp", doc_id.ToString());
+                            var _path_file = Path.Combine(Directory.GetCurrentDirectory(), "file", doc_id.ToString());
 
                             if (value.docfile.Count > 0)
                             {
-                                //delete --> insert
-                                cls_connection_cpai cls = new cls_connection_cpai();
+                                //delete --> insert 
                                 List<DocFileListModel> docfileList = value.docfile;
-                                sql = " delete from BZ_DOC_FILE where DH_CODE = '" + value.doc_id + "' ";
-                                context.Database.ExecuteSqlCommand(sql);
+                                sql = " delete from BZ_DOC_FILE where DH_CODE = :doc_id ";
+
+                                parameters = new List<OracleParameter>();
+                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                if (iret > 0) { }
 
                                 foreach (var item in docfileList)
                                 {
                                     sql = " insert into BZ_DOC_FILE (DH_CODE, DF_ID, DF_NAME, DF_PATH, DF_REMARK, CREATED_BY, CREATED_DATE)";
-                                    sql += " values ('" + item.DH_CODE + "','" + imaxid_docfile + "', " + cls.ChkSqlStr(item.DF_NAME, 4000) + " , " + cls.ChkSqlStr(file_path, 4000) + " , " + cls.ChkSqlStr(item.DF_REMARK, 4000) + " ,'" + user_id + "',sysdate )";
+                                    sql += " values (:item_dh_code, :item_dh_name , :file_path , :item_dh_remark , :user_id_def, sysdate )";
 
-                                    context.Database.ExecuteSqlCommand(sql);
+                                    var item_dh_code = item.DH_CODE ?? "";
+                                    var item_dh_name = item.DF_NAME ?? "";
+                                    var item_dh_remark = item.DF_REMARK ?? "";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("item_dh_code", item_dh_code, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_dh_name", item_dh_name, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("item_dh_remark", item_dh_remark, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("file_path", file_path, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
 
                                     imaxid_docfile += 1;
                                 }
@@ -5074,35 +6209,53 @@ namespace top.ebiz.service.Service.Create_trip
                                                 sql = @" select a.dta_appr_empid as emp_id, dta_appr_level as status_value
                                                        from bz_doc_traveler_approver a   
                                                        where dta_type = 2 and dta_doc_status = 41
-                                                       and a.dh_code = '" + value.doc_id + "' and a.dta_travel_empid in (" + traverler_id_def + ") ";
+                                                       and a.dh_code = :doc_id and a.dta_travel_empid = :traverler_id_def ";
                                                 sql += @" and a.dta_appr_level > ( select  max(a1.dta_appr_level) as dta_appr_level
                                                        from bz_doc_traveler_approver a1
                                                        where a1.dta_type = 2 and a1.dta_doc_status in ( 40,42)
-                                                       and a1.dh_code = '" + value.doc_id + "'  and a1.dta_travel_empid =  " + traverler_id_def + " )  ";
+                                                       and a1.dh_code = :doc_id  and a1.dta_travel_empid = :traverler_id_def )  ";
 
                                                 sql = "select emp_id, status_value from(" + sql + ")t order by to_number(status_value)";
-                                                var dataCAP_Def = context.Database.SqlQuery<allApproveModel>(sql).ToList();
+
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                var dataCAP_Def = context.AllApproveModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                                 if (dataCAP_Def != null)
                                                 {
                                                     if (dataCAP_Def.Count > 0)
                                                     {
                                                         emp_id_cap_next_level = dataCAP_Def[0].emp_id.ToString();
-                                                        foreach (var c in dataCAP_Def)
+                                                        foreach (var itemCAP in dataCAP_Def)
                                                         {
                                                             sql = "update BZ_DOC_TRAVELER_APPROVER set ";
                                                             sql += "DTA_DOC_STATUS ='40' ";
                                                             sql += ", DTA_ACTION_STATUS ='6' ";  //6:Not Active
                                                             sql += ", DTA_APPR_STATUS ='true' ";
-                                                            sql += " where DTA_TYPE = 2 and DTA_APPR_EMPID = '" + c.emp_id + "' ";
-                                                            sql += " and  DH_CODE = '" + value.doc_id + "' ";
-                                                            sql += " and  DTA_TRAVEL_EMPID = '" + traverler_id_def + "' ";
-                                                            context.Database.ExecuteSqlCommand(sql);
+                                                            sql += " where DTA_TYPE = 2 and DTA_APPR_EMPID = :item_emp_id ";
+                                                            sql += " and  DH_CODE = :doc_id ";
+                                                            sql += " and  DTA_TRAVEL_EMPID = :traverler_id_def ";
+
+                                                            var item_emp_id = itemCAP.emp_id ?? "";
+
+                                                            parameters = new List<OracleParameter>();
+                                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                            parameters.Add(context.ConvertTypeParameter("item_emp_id", item_emp_id, "char"));
+                                                            parameters.Add(context.ConvertTypeParameter("traverler_id_def", traverler_id_def, "char"));
+                                                            iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                                            if (iret > 0) { }
 
                                                             context.SaveChanges();
-                                                            sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                                            sql += " where dh_code='" + value.doc_id + "' and EMP_ID= '" + c.emp_id + "' ";
+                                                            sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                                            sql += " where dh_code= :doc_id and EMP_ID= :item_emp_id ";
                                                             sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                                            context.Database.ExecuteSqlCommand(sql);
+
+                                                            parameters = new List<OracleParameter>();
+                                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                            parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                                            parameters.Add(context.ConvertTypeParameter("item_emp_id", item_emp_id, "char"));
+                                                            iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                                            if (iret > 0) { }
+
                                                             context.SaveChanges();
 
                                                         }
@@ -5129,14 +6282,18 @@ namespace top.ebiz.service.Service.Create_trip
                                                 sql = @" select a.dta_appr_empid as emp_id, dta_appr_level as status_value
                                                        from bz_doc_traveler_approver a   
                                                        where dta_type = 2 and dta_doc_status = 41
-                                                       and a.dh_code = '" + value.doc_id + "' and a.dta_travel_empid in (" + traverler_id_def + ") ";
+                                                       and a.dh_code = :doc_id and a.dta_travel_empid = :traverler_id_def ";
                                                 sql += @" and a.dta_appr_level > ( select  max(a1.dta_appr_level) as dta_appr_level
                                                        from bz_doc_traveler_approver a1
                                                        where a1.dta_type = 2 and a1.dta_doc_status in (42)
-                                                       and a1.dh_code = '" + value.doc_id + "'  and a1.dta_travel_empid =  " + traverler_id_def + " )  ";
+                                                       and a1.dh_code = :doc_id  and a1.dta_travel_empid =  :traverler_id_def )  ";
 
                                                 sql = "select emp_id, status_value from(" + sql + ")t order by to_number(status_value)";
-                                                var dataCAP_Def = context.Database.SqlQuery<allApproveModel>(sql).ToList();
+
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("traverler_id_def", traverler_id_def, "char"));
+                                                var dataCAP_Def = context.AllApproveModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                                 if (dataCAP_Def != null)
                                                 {
                                                     if (dataCAP_Def.Count > 0)
@@ -5148,30 +6305,38 @@ namespace top.ebiz.service.Service.Create_trip
                                         }
                                     }
                                 }
-                                apprAllStatus = AllApproveCAPApprover(value.doc_id, ref ret_doc_status);
+                                apprAllStatus = AllApproveCAPApprover(doc_id, ref ret_doc_status);
                             }
 
                             #region DevFix 20210714 0000 กรณีที่ CAP Action ครบทุกคนแล้วให้ update status ของ admin = 2  
-                            sql = @" select count(1) as status_value
-                                     from BZ_DOC_TRAVELER_APPROVER a
-                                     where a.dta_type = 2 and a.dta_action_status in (1,2)
-                                     and a.dh_code = '" + value.doc_id + "'  ";
-                            var dataApporver_Def = context.Database.SqlQuery<allApproveModel>(sql).FirstOrDefault();
-                            if (dataApporver_Def.status_value == 0)
+
+                            sql = @" select count(1) as status_value from BZ_DOC_TRAVELER_APPROVER a where a.dta_type = 2 and a.dta_action_status in (1,2) and a.dh_code = :doc_id  ";
+
+                            parameters = new List<OracleParameter>();
+                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                            var dataApporver_Def = context.AllApproveModelList.FromSqlRaw(sql, parameters.ToArray()).FirstOrDefault();
+                            if (dataApporver_Def != null)
                             {
-                                sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY='" + user_id + "', ACTION_STATUS=2 ";
-                                sql += " where dh_code='" + value.doc_id + "' and EMP_ID='admin' ";
-                                sql += " and DOC_STATUS = 41 and ACTION_STATUS=1 ";
-                                context.Database.ExecuteSqlCommand(sql);
-                                context.SaveChanges();
+                                if (dataApporver_Def.status_value == 0)
+                                {
+                                    sql = " update BZ_DOC_ACTION set ACTION_DATE=sysdate, ACTION_BY= :user_id_def, ACTION_STATUS=2 ";
+                                    sql += " where dh_code= :doc_id and EMP_ID='admin' and DOC_STATUS = 41 and ACTION_STATUS=1 ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                                    if (iret > 0) { }
+
+                                    context.SaveChanges();
+                                }
                             }
                             #endregion DevFix 20210714 0000 กรณีที่ CAP Action ครบทุกคนแล้วให้ update status ของ admin = 2
 
 
                             #region "#### SEND MAIL ####" 
-                            write_log_mail("0-email.start-submitFlow4", "type_flow :" + type_flow + " =>value.action.type :" + value.action.type
-                               + " =>apprAllStatus :" + apprAllStatus + " =>emp_id_cap_next_level :" + emp_id_cap_next_level);
 
+                            write_log_mail($"0-email.start-submitFlow4", "type_flow :{type_flow} =>value.action.type :{value.action.type} =>apprAllStatus :{apprAllStatus} =>emp_id_cap_next_level : {emp_id_cap_next_level}");
 
                             //DevFix 20200910 0727 เพิ่มแนบ link Ebiz ด้วย Link ไปหน้า login  
                             string url_login = LinkLogin;
@@ -5189,6 +6354,8 @@ namespace top.ebiz.service.Service.Create_trip
                                 {
                                     //*** กรณีที่เป็นการ approver reject สุดท้ายต้อง ส่ง mail reject ก่อน 
                                     #region traveler mail in doc
+                                    traveler_mail = "";
+
                                     sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2 
                                              , b.employeeid as name3, b.orgname as name4                      
                                              from bz_doc_traveler_approver a
@@ -5196,15 +6363,21 @@ namespace top.ebiz.service.Service.Create_trip
                                              left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s
                                              on a.dh_code =s.dh_code and a.dta_travel_empid = s.dte_emp_id 
                                              where a.dta_type = 2 and a.dta_action_status in (5) and a.dta_doc_status = 40
-                                             and a.dh_code ='" + value.doc_id + "' ";
+                                             and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
-                                        sql += @" and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += @" and a.dta_appr_empid = :user_id_def";
                                     }
                                     sql += @" order by s.id ";
 
-                                    traveler_mail = "";
-                                    var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    if (user_role != "1")
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    }
+                                    var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                     if (tempTravel != null)
                                     {
                                         foreach (var item in tempTravel)
@@ -5214,14 +6387,16 @@ namespace top.ebiz.service.Service.Create_trip
                                     }
                                     #endregion traveler mail in doc
                                     #region approver mail in doc 
+                                    approver_mail = "";
+
                                     sql = @" select distinct b.email                       
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 2 and a.dta_action_status in (5) and a.dta_doc_status = 40
-                                                 and a.dh_code = '" + value.doc_id + "' ";
+                                                 and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
-                                        sql += " and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += " and a.dta_appr_empid = :user_id_def ";
                                     }
                                     sql += @" union ";
                                     sql += @" select distinct b.email                 
@@ -5234,19 +6409,25 @@ namespace top.ebiz.service.Service.Create_trip
                                     if (user_role != "1")
                                     {
                                         //หา line ที่อยู่ภายใต้ cap
-                                        sql += " and a1.dta_appr_empid ='" + user_id + "' ";
+                                        sql += " and a1.dta_appr_empid = :user_id_def ";
                                     }
                                     sql += " )";
-                                    sql += " and a.dh_code = '" + value.doc_id + "' ";
-                                    approver_mail = "";
-                                    var approvermailList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                    sql += " and a.dh_code = :doc_id ";
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    if (user_role != "1")
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    }
+                                    var approvermailList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                     if (approvermailList != null)
                                     {
                                         if (approvermailList.Count > 0)
                                         {
                                             for (int m = 0; m < approvermailList.Count; m++)
                                             {
-                                                //if (approver_mail != "") { approver_mail += ";"; }
                                                 approver_mail += ";" + approvermailList[m].email;
                                             }
                                         }
@@ -5271,10 +6452,13 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                        sql += " and a.dte_cap_appr_status  = '" + doc_status + "'  order by s.id ";
+                                                     WHERE a.dh_code = :doc_id and a.dte_status = 1 ";
+                                        sql += " and a.dte_cap_appr_status  = :doc_status  order by s.id ";
 
-                                        var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                        var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                                         if (temp != null && temp.Count() > 0)
                                         {
@@ -5307,21 +6491,24 @@ namespace top.ebiz.service.Service.Create_trip
 
                                         sDear = "Dear All,";
 
-                                        sDetail = "Your business travel request has been reject by " + login_empid[0].user_name + ". To view the details, click ";
+                                        sDetail = "Your business travel request has been reject by " + user_name + ". To view the details, click ";
                                         sDetail += "<a href='" + LinkLogin.Replace("/i", "/cap").Replace("###", value.doc_id) + "'>" + value.doc_id + "</a>";
 
-                                        var iNo = 1;
-                                        sTravelerList = "<table>";
-                                        foreach (var item in tempTravel)
+                                        if (tempTravel != null && tempTravel?.Count > 0)
                                         {
-                                            sTravelerList += " <tr>";
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                            sTravelerList += " </tr>";
-                                            iNo++;
+                                            var iNo = 1;
+                                            sTravelerList = "<table>";
+                                            foreach (var item in tempTravel)
+                                            {
+                                                sTravelerList += " <tr>";
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                sTravelerList += " </tr>";
+                                                iNo++;
+                                            }
+                                            sTravelerList += "</table>";
                                         }
-                                        sTravelerList += "</table>";
 
                                         #region set mail
                                         try
@@ -5389,15 +6576,19 @@ namespace top.ebiz.service.Service.Create_trip
                                         //DevFix 20211021 0000 เพื่อนำไปใช้ในการแจ้งเตือน 028_OB/LB/OT/LT : Business Travel Confirmation Letter
                                         Set_Trip_Complated(context, value.token_login, value.doc_id);
 
-                                        #region traveler mail in doc  
+                                        #region traveler mail in doc    
+                                        traveler_mail_reject = "";
+
                                         //DevFix 20210813 0000 แก้ไขให้ส่ง mail ไปหา traverlerที่ reject ของ action submit
                                         sql = @" select distinct nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2                      
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_travel_empid = b.employeeid 
                                                  where a.dta_type = 2 and a.dta_action_status in (5) and a.dta_doc_status = 42
-                                                 and a.dh_code ='" + value.doc_id + "'  ";
-                                        var traveler_reject = context.Database.SqlQuery<tempModel>(sql).ToList();
-                                        traveler_mail_reject = "";
+                                                 and a.dh_code = :doc_id ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        var traveler_reject = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
                                         if (traveler_reject != null)
                                         {
                                             foreach (var item in traveler_reject)
@@ -5412,8 +6603,12 @@ namespace top.ebiz.service.Service.Create_trip
                                                  left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s
                                                  on a.dh_code =s.dh_code and a.dta_travel_empid = s.dte_emp_id 
                                                  where a.dta_type = 2 and a.dta_action_status in (3) and a.dta_doc_status = 42
-                                                 and a.dh_code ='" + value.doc_id + "'  order by s.id ";
-                                        var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                 and a.dh_code = :doc_id order by s.id ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                         traveler_mail = "";
                                         if (tempTravel != null)
                                         {
@@ -5424,26 +6619,30 @@ namespace top.ebiz.service.Service.Create_trip
                                         }
                                         #endregion traveler mail in doc
                                         #region approver mail in doc 
+                                        approver_mail = "";
+
                                         sql = @" select distinct b.email                       
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 2 and a.dta_action_status in (3) and a.dta_doc_status = 42
-                                                 and a.dh_code = '" + value.doc_id + "' ";
+                                                 and a.dh_code = :doc_id ";
                                         sql += @" union ";
                                         sql += @" select distinct b.email                       
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 1 and a.dta_action_status in (3) and a.dta_doc_status = 32
-                                                 and a.dh_code = '" + value.doc_id + "' ";
-                                        approver_mail = "";
-                                        var approvermailList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                                 and a.dh_code = :doc_id ";
+
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        var approvermailList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                         if (approvermailList != null)
                                         {
                                             if (approvermailList.Count > 0)
                                             {
                                                 for (int m = 0; m < approvermailList.Count; m++)
                                                 {
-                                                    //if (approver_mail != "") { approver_mail += ";"; }
                                                     approver_mail += ";" + approvermailList[m].email;
                                                 }
                                             }
@@ -5462,14 +6661,6 @@ namespace top.ebiz.service.Service.Create_trip
                                                     sBusinessDate = "Business Date : " + dateFromTo(doc_head_search.DH_BUS_FROMDATE?.ToString("yyyy-MM-dd", new System.Globalization.CultureInfo("en-US")), doc_head_search.DH_BUS_TODATE?.ToString("yyyy-MM-dd", new System.Globalization.CultureInfo("en-US"))) ?? "";
                                                 }
 
-                                                //sql = @"  select distinct case when substr(tv.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,tv.city_text as name2    
-                                                //     FROM bz_doc_traveler_expense tv inner join BZ_DOC_HEAD h on h.dh_code=tv.dh_code
-                                                //     inner join BZ_USERS U on tv.DTE_Emp_Id = u.employeeid
-                                                //     left join bz_master_country c on tv.ct_id = c.ct_id
-                                                //     left join BZ_MASTER_PROVINCE p on tv.PV_ID = p.PV_ID
-                                                //     WHERE tv.dh_code in ('" + value.doc_id + "') and tv.dte_status = 1 ";
-                                                //sql += " and tv.dte_cap_appr_status  = '" + doc_status + "'";
-
                                                 sql = @"  select distinct to_char(s.id) as id, case when substr(a.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,a.city_text as name2    
                                                      FROM bz_doc_traveler_expense a inner join BZ_DOC_HEAD h on h.dh_code=a.dh_code
                                                      inner join BZ_USERS U on a.DTE_Emp_Id = u.employeeid
@@ -5478,10 +6669,14 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                                sql += " and a.dte_cap_appr_status  = '" + doc_status + "'  order by s.id ";
+                                                     WHERE a.dh_code = :doc_id and a.dte_status = 1 ";
+                                                sql += " and a.dte_cap_appr_status  = :doc_status order by s.id ";
 
-                                                var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                                var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                                 if (temp != null && temp.Count() > 0)
                                                 {
                                                     //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -5514,7 +6709,8 @@ namespace top.ebiz.service.Service.Create_trip
                                                 if (file_Approval_Output_form != "")
                                                 {
                                                     string file_name = file_Approval_Output_form;// @"temp\APPROVAL_FORM_OT21060025_2021100410233333.xlsx";
-                                                    string _FolderMailAttachments = System.Configuration.ConfigurationManager.AppSettings["FilePathServerApp"].ToString();//d:\Ebiz2\Ebiz_App\
+                                                    //string _FolderMailAttachments = System.Configuration.ConfigurationManager.AppSettings["FilePathServerApp"].ToString();//d:\Ebiz2\Ebiz_App\
+                                                    string _FolderMailAttachments = configApp.GetStringFromAppSettings("FilePathServerApp") ?? "";
                                                     string mail_attachments = _FolderMailAttachments + file_name;
                                                     dataMail.mail_attachments = mail_attachments;
                                                 }
@@ -5527,19 +6723,21 @@ namespace top.ebiz.service.Service.Create_trip
                                                 sDetail += "Any additional arrangements require to complete by the traveler. To view travel details, click ";
                                                 sDetail += "<a href='" + LinkLoginPhase2.Replace("###", value.doc_id) + "'>travel details.</a>";
 
-                                                var iNo = 1;
-                                                sTravelerList = "<table>";
-                                                foreach (var item in tempTravel)
+                                                if (tempTravel != null && tempTravel?.Count > 0)
                                                 {
-                                                    sTravelerList += " <tr>";
-                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                                    sTravelerList += " </tr>";
-                                                    iNo++;
+                                                    var iNo = 1;
+                                                    sTravelerList = "<table>";
+                                                    foreach (var item in tempTravel)
+                                                    {
+                                                        sTravelerList += " <tr>";
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                        sTravelerList += " </tr>";
+                                                        iNo++;
+                                                    }
+                                                    sTravelerList += "</table>";
                                                 }
-                                                sTravelerList += "</table>";
-
                                                 #region set mail
                                                 try
                                                 {
@@ -5603,138 +6801,140 @@ namespace top.ebiz.service.Service.Create_trip
                                             try
                                             {
                                                 //ส่งตอน CAP Approve แล้วและตรวจสอบได้ว่าไม่มี valid passport เเละให้ส่ง E-Mail  
-                                                foreach (var itemTravel in tempTravel)
+                                                if (tempTravel != null && tempTravel?.Count > 0)
                                                 {
-                                                    var bValidPassportExpire = true;
-                                                    var traveler_id = itemTravel.name3;
-                                                    var traveler_name = itemTravel.name1;
-                                                    sql = @" select distinct emp_id as name1 from bz_data_passport 
+                                                    foreach (var itemTravel in tempTravel)
+                                                    {
+                                                        var bValidPassportExpire = true;
+                                                        var item_traveler_id = itemTravel.name3 ?? "";
+                                                        var item_traveler_name = itemTravel.name1 ?? "";
+                                                        sql = @" select distinct emp_id as name1 from bz_data_passport 
                                                      where default_type = 'true' and to_date(passport_date_expire,'dd Mon yyyy') >= sysdate
-                                                     and emp_id = '" + traveler_id + "' ";
-                                                    var dataPassport = context.Database.SqlQuery<tempModel>(sql).ToList();
-                                                    if (dataPassport != null)
-                                                    {
-                                                        if (dataPassport.Count > 0) { bValidPassportExpire = false; }
-                                                    }
-                                                    if (bValidPassportExpire == false) { continue; }
+                                                     and emp_id = :item_traveler_id ";
 
-                                                    //sql = @"  select distinct case when substr(tv.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,tv.city_text as name2    
-                                                    // FROM bz_doc_traveler_expense tv inner join BZ_DOC_HEAD h on h.dh_code=tv.dh_code
-                                                    // inner join BZ_USERS U on tv.DTE_Emp_Id = u.employeeid
-                                                    // left join bz_master_country c on tv.ct_id = c.ct_id
-                                                    // left join BZ_MASTER_PROVINCE p on tv.PV_ID = p.PV_ID
-                                                    // WHERE tv.dh_code in ('" + value.doc_id + "') and tv.dte_status = 1 ";
-                                                    //sql += " and tv.dte_cap_appr_status  = '" + doc_status + "' ";
-                                                    //sql += " and tv.DTE_Emp_Id = '" + traveler_id + "' ";
+                                                        parameters = new List<OracleParameter>();
+                                                        parameters.Add(context.ConvertTypeParameter("item_traveler_id", item_traveler_id, "char"));
+                                                        var dataPassport = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
-                                                    sql = @"  select distinct to_char(s.id) as id, case when substr(a.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,a.city_text as name2    
-                                                     FROM bz_doc_traveler_expense a inner join BZ_DOC_HEAD h on h.dh_code=a.dh_code
-                                                     inner join BZ_USERS U on a.DTE_Emp_Id = u.employeeid
-                                                     left join bz_master_country c on a.ct_id = c.ct_id
-                                                     left join BZ_MASTER_PROVINCE p on a.PV_ID = p.PV_ID
-                                                     left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
-                                                     ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
-                                                     and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                                    sql += " and a.dte_cap_appr_status  = '" + doc_status + "'  ";
-                                                    sql += " and a.DTE_Emp_Id = '" + traveler_id + "'  order by s.id";
-
-                                                    var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
-                                                    if (temp != null && temp.Count() > 0)
-                                                    {
-                                                        //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
-                                                        //DevFix 20210816 0000 กรณีที่มีมากกว่า 1 Location
-                                                        if (temp.Count == 1)
+                                                        if (dataPassport != null)
                                                         {
-                                                            sLocation = "Location : " + temp[0].name1 + "/" + temp[0].name2;
+                                                            if (dataPassport.Count > 0) { bValidPassportExpire = false; }
                                                         }
-                                                        else
+                                                        if (bValidPassportExpire == false) { continue; }
+
+                                                        sql = @" select distinct to_char(s.id) as id, case when substr(a.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,a.city_text as name2    
+                                                                FROM bz_doc_traveler_expense a inner join BZ_DOC_HEAD h on h.dh_code=a.dh_code
+                                                                inner join BZ_USERS U on a.DTE_Emp_Id = u.employeeid
+                                                                left join bz_master_country c on a.ct_id = c.ct_id
+                                                                left join BZ_MASTER_PROVINCE p on a.PV_ID = p.PV_ID
+                                                                left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
+                                                                ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
+                                                                and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
+                                                                WHERE a.dte_status = 1  
+                                                                and a.dh_code = :doc_id and a.dte_cap_appr_status  = :doc_status and a.DTE_Emp_Id = :item_traveler_id  order by s.id";
+
+                                                        parameters = new List<OracleParameter>();
+                                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                                        parameters.Add(context.ConvertTypeParameter("item_traveler_id", item_traveler_id, "char"));
+                                                        var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                                                        if (temp != null && temp.Count() > 0)
                                                         {
-                                                            sLocation = "";
-                                                            foreach (var item in temp)
+                                                            //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
+                                                            //DevFix 20210816 0000 กรณีที่มีมากกว่า 1 Location
+                                                            if (temp.Count == 1)
                                                             {
-                                                                if (sLocation == "") { sLocation = "Location : "; } else { sLocation += ","; }
-                                                                sLocation += item.name1 + "/" + item.name2;
+                                                                sLocation = "Location : " + temp[0].name1 + "/" + temp[0].name2;
+                                                            }
+                                                            else
+                                                            {
+                                                                sLocation = "";
+                                                                foreach (var item in temp)
+                                                                {
+                                                                    if (sLocation == "") { sLocation = "Location : "; } else { sLocation += ","; }
+                                                                    sLocation += item.name1 + "/" + item.name2;
+                                                                }
                                                             }
                                                         }
-                                                    }
 
-                                                    sendEmailService mail = new sendEmailService();
-                                                    sendEmailModel dataMail = new sendEmailModel();
+                                                        sendEmailService mail = new sendEmailService();
+                                                        sendEmailModel dataMail = new sendEmailModel();
 
-                                                    //TO: Traveler
-                                                    //CC : Admin - PMSV; Admin - PMDV(if any);
-                                                    dataMail.mail_to = itemTravel.name2;
-                                                    dataMail.mail_cc = admin_mail;// approver_mail + requester_mail + on_behalf_of_mail + traveler_mail_reject;
-                                                    dataMail.mail_subject = value.doc_id + " : Please update Passport information - " + itemTravel.name1;
+                                                        //TO: Traveler
+                                                        //CC : Admin - PMSV; Admin - PMDV(if any);
+                                                        dataMail.mail_to = itemTravel.name2;
+                                                        dataMail.mail_cc = admin_mail;// approver_mail + requester_mail + on_behalf_of_mail + traveler_mail_reject;
+                                                        dataMail.mail_subject = value.doc_id + " : Please update Passport information - " + itemTravel.name1;
 
-                                                    sDear = "Dear " + itemTravel.name1 + ",";
+                                                        sDear = "Dear " + itemTravel.name1 + ",";
 
-                                                    sDetail = "Your require to update passport information in order to make further arrangements. To view travel details, click ";
-                                                    sDetail += "<a href='" + LinkLoginPhase2.Replace("###", value.doc_id).Replace("travelerhistory", "passport") + "'>" + value.doc_id + "</a>";
+                                                        sDetail = "Your require to update passport information in order to make further arrangements. To view travel details, click ";
+                                                        sDetail += "<a href='" + LinkLoginPhase2.Replace("###", value.doc_id).Replace("travelerhistory", "passport") + "'>" + value.doc_id + "</a>";
 
-                                                    var iNo = 1;
-                                                    sTravelerList = "<table>";
-                                                    //foreach (var item in tempTravel)
-                                                    //{ 
-                                                    sTravelerList += " <tr>";
-                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + itemTravel.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + itemTravel.name3 + "</span></font></td>";//Emp. ID
-                                                    sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + itemTravel.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                                    sTravelerList += " </tr>";
-                                                    iNo++;
-                                                    //}
-                                                    sTravelerList += "</table>";
+                                                        var iNo = 1;
+                                                        sTravelerList = "<table>";
+                                                        //foreach (var item in tempTravel)
+                                                        //{ 
+                                                        sTravelerList += " <tr>";
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + itemTravel.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + itemTravel.name3 + "</span></font></td>";//Emp. ID
+                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + itemTravel.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                        sTravelerList += " </tr>";
+                                                        iNo++;
+                                                        //}
+                                                        sTravelerList += "</table>";
 
-                                                    #region set mail
-                                                    try
-                                                    {
-                                                        sReasonRejected = "";
-                                                        //if (value.action.type == "2") { sReasonRejected = "Reason Rejected : " + value.action.remark; }
-                                                        //else if (value.action.type == "3") { sReasonRejected = "Reason Revised : " + value.action.remark; }
-                                                    }
-                                                    catch { }
-                                                    dataMail.mail_body = @"<span lang='en-US'>";
-                                                    dataMail.mail_body += "<div>";
-                                                    dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sDear + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sDetail + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sTitle + "</span></font></div>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sBusinessDate + "</span></font></div>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sLocation + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
-                                                    dataMail.mail_body += "     <span style='font-size:15pt;'>Traveler List : " + sTravelerList + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    if (sReasonRejected != "")
-                                                    {
-                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
-                                                        dataMail.mail_body += "     " + sReasonRejected + "</font></div>";
+                                                        #region set mail
+                                                        try
+                                                        {
+                                                            sReasonRejected = "";
+                                                            //if (value.action.type == "2") { sReasonRejected = "Reason Rejected : " + value.action.remark; }
+                                                            //else if (value.action.type == "3") { sReasonRejected = "Reason Revised : " + value.action.remark; }
+                                                        }
+                                                        catch { }
+                                                        dataMail.mail_body = @"<span lang='en-US'>";
+                                                        dataMail.mail_body += "<div>";
+                                                        dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sDear + "</span></font></div>";
                                                         dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sDetail + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sTitle + "</span></font></div>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sBusinessDate + "</span></font></div>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sLocation + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
+                                                        dataMail.mail_body += "     <span style='font-size:15pt;'>Traveler List : " + sTravelerList + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        if (sReasonRejected != "")
+                                                        {
+                                                            dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
+                                                            dataMail.mail_body += "     " + sReasonRejected + "</font></div>";
+                                                            dataMail.mail_body += "     <br>";
+                                                        }
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     If you have any question please contact Business Travel Services Team (Tel. " + Tel_Services_Team + ").";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     For the application assistance, please contact PTT Digital Call Center (Tel. " + Tel_Call_Center + ").";
+                                                        dataMail.mail_body += "     </span></font></div>";
+
+                                                        dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     Best Regards,";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     Business Travel Services Team (PMSV)";
+                                                        dataMail.mail_body += "     </span></font></div>";
+
+                                                        dataMail.mail_body += "</div>";
+                                                        dataMail.mail_body += "</span>";
+                                                        mail.sendMail(dataMail);
+                                                        #endregion set mail
                                                     }
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     If you have any question please contact Business Travel Services Team (Tel. " + Tel_Services_Team + ").";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     For the application assistance, please contact PTT Digital Call Center (Tel. " + Tel_Call_Center + ").";
-                                                    dataMail.mail_body += "     </span></font></div>";
-
-                                                    dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     Best Regards,";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     Business Travel Services Team (PMSV)";
-                                                    dataMail.mail_body += "     </span></font></div>";
-
-                                                    dataMail.mail_body += "</div>";
-                                                    dataMail.mail_body += "</span>";
-                                                    mail.sendMail(dataMail);
-                                                    #endregion set mail
                                                 }
                                             }
                                             catch (Exception ex) { write_log_mail("88-email.message-submitFlow4", "error Travel " + ex.ToString()); }
@@ -5747,6 +6947,8 @@ namespace top.ebiz.service.Service.Create_trip
                                         if (emp_id_cap_next_level != "")
                                         {
                                             #region traveler mail in doc
+                                            traveler_mail = "";
+
                                             sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2  
                                                      , b.employeeid as name3, b.orgname as name4                     
                                                      from bz_doc_traveler_approver a
@@ -5754,16 +6956,23 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s
                                                      on a.dh_code =s.dh_code and a.dta_travel_empid = s.dte_emp_id  
                                                      where a.dta_type = 2 and a.dta_action_status in (3) and a.dta_doc_status = 42
-                                                     and a.dh_code ='" + value.doc_id + "' ";
+                                                     and a.dh_code = :doc_id ";
 
                                             if (user_role != "1")
                                             {
-                                                sql += @" and a.dta_appr_empid ='" + user_id + "' ";
+                                                sql += @" and a.dta_appr_empid ='" + user_id_def + "' ";
                                             }
                                             sql += @" order by s.id ";
 
-                                            traveler_mail = "";
-                                            var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                            if (user_role != "1")
+                                            {
+                                                parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                            }
+                                            var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             if (tempTravel != null)
                                             {
                                                 foreach (var item in tempTravel)
@@ -5774,17 +6983,25 @@ namespace top.ebiz.service.Service.Create_trip
                                             #endregion traveler mail in doc
 
                                             #region approver mail in doc 
+                                            approver_mail = "";
+
                                             sql = @" select distinct b.email                       
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 2 and a.dta_action_status in (3) and a.dta_doc_status = 42
-                                                 and a.dh_code = '" + value.doc_id + "' ";
+                                                 and a.dh_code = :doc_id ";
                                             if (user_role != "1")
                                             {
-                                                sql += " and a.dta_appr_empid ='" + user_id + "' ";
+                                                sql += " and a.dta_appr_empid = :user_id_def";
                                             }
-                                            approver_mail = "";
-                                            var approvermailList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            if (user_role != "1")
+                                            {
+                                                parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                            }
+                                            var approvermailList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             if (approvermailList != null)
                                             {
                                                 if (approvermailList.Count > 0)
@@ -5818,10 +7035,13 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                                sql += " and a.dte_cap_appr_status  = '" + doc_status + "'  order by s.id ";
+                                                     WHERE a.dh_code :doc_id and a.dte_status = 1 ";
+                                                sql += " and a.dte_cap_appr_status  = :doc_status  order by s.id ";
 
-                                                var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                                 if (temp != null && temp.Count() > 0)
                                                 {
                                                     //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -5847,93 +7067,102 @@ namespace top.ebiz.service.Service.Create_trip
                                                 sql = @" select distinct nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME user_name
                                                          , b.email email ,a.dta_appr_empid as user_id
                                                          from bz_doc_traveler_approver a left join bz_users b on a.dta_appr_empid = b.employeeid
-                                                         where a.dh_code = '" + value.doc_id + "' and a.dta_type = 2 and a.dta_action_status in (2) ";
+                                                         where a.dh_code = :doc_id and a.dta_type = 2 and a.dta_action_status in (2) ";
 
                                                 //DevFix 20210810 0000 กรณีที่ Line Approve แล้วให้ส่งไปยัง CAP ลำดับแรกของแต่ละ traveler
                                                 sql += @" and (a.dta_appr_level, a.dta_travel_empid) in (
                                                          select min(dta_appr_level),dta_travel_empid from bz_doc_traveler_approver a1
-                                                         where a1.dh_code = '" + value.doc_id + "' and a1.dta_type = 2 and a1.dta_action_status in (2) group by dta_travel_empid )";
-                                                var empapp = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                                         where a1.dh_code = :doc_id and a1.dta_type = 2 and a1.dta_action_status in (2) group by dta_travel_empid )";
 
-                                                foreach (var iemp in empapp)
+                                                parameters = new List<OracleParameter>();
+                                                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                                var empapp = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
+                                                if (empapp != null && empapp?.Count > 0)
                                                 {
-                                                    //to : CAP Approval
-                                                    //cc : Line Approval, Super admin, Requester, Traveller
-
-                                                    dataMail.mail_to = iemp.email ?? "";
-                                                    dataMail.mail_cc = approver_mail + admin_mail + requester_mail + traveler_mail + on_behalf_of_mail;
-                                                    dataMail.mail_subject = value.doc_id + " : Please approve business travel request as CAP.";
-
-                                                    sDear = "Dear " + iemp.user_name + ",";
-
-                                                    sDetail = "Please approve business travel request as CAP. To view the details, click ";
-                                                    sDetail += "<a href='" + LinkLogin.Replace("/i", "/cap").Replace("###", value.doc_id) + "'>" + value.doc_id + "</a>";
-
-                                                    var iNo = 1;
-                                                    sTravelerList = "<table>";
-                                                    foreach (var item in tempTravel)
+                                                    foreach (var iemp in empapp)
                                                     {
-                                                        sTravelerList += " <tr>";
-                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                                        sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                                        sTravelerList += " </tr>";
-                                                        iNo++;
-                                                    }
-                                                    sTravelerList += "</table>";
+                                                        //to : CAP Approval
+                                                        //cc : Line Approval, Super admin, Requester, Traveller
 
-                                                    #region set mail
-                                                    try
-                                                    {
-                                                        sReasonRejected = "";
-                                                        //if (value.action.type == "2") { sReasonRejected = "Reason Rejected : " + value.action.remark; }
-                                                        //else if (value.action.type == "3") { sReasonRejected = "Reason Revised : " + value.action.remark; }
-                                                    }
-                                                    catch { }
+                                                        dataMail.mail_to = iemp.email ?? "";
+                                                        dataMail.mail_cc = approver_mail + admin_mail + requester_mail + traveler_mail + on_behalf_of_mail;
+                                                        dataMail.mail_subject = value.doc_id + " : Please approve business travel request as CAP.";
 
-                                                    dataMail.mail_body = @"<span lang='en-US'>";
-                                                    dataMail.mail_body += "<div>";
-                                                    dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sDear + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sDetail + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sTitle + "</span></font></div>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sBusinessDate + "</span></font></div>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     " + sLocation + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
-                                                    dataMail.mail_body += "     <span style='font-size:15pt;'>Traveler List : " + sTravelerList + "</span></font></div>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    if (sReasonRejected != "")
-                                                    {
-                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
-                                                        dataMail.mail_body += "     " + sReasonRejected + "</font></div>";
+                                                        sDear = "Dear " + iemp.user_name + ",";
+
+                                                        sDetail = "Please approve business travel request as CAP. To view the details, click ";
+                                                        sDetail += "<a href='" + LinkLogin.Replace("/i", "/cap").Replace("###", value.doc_id) + "'>" + value.doc_id + "</a>";
+
+
+                                                        if (tempTravel != null && tempTravel?.Count > 0)
+                                                        {
+                                                            var iNo = 1;
+                                                            sTravelerList = "<table>";
+                                                            foreach (var item in tempTravel)
+                                                            {
+                                                                sTravelerList += " <tr>";
+                                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                                sTravelerList += " </tr>";
+                                                                iNo++;
+                                                            }
+                                                            sTravelerList += "</table>";
+                                                        }
+
+                                                        #region set mail
+                                                        try
+                                                        {
+                                                            sReasonRejected = "";
+                                                            //if (value.action.type == "2") { sReasonRejected = "Reason Rejected : " + value.action.remark; }
+                                                            //else if (value.action.type == "3") { sReasonRejected = "Reason Revised : " + value.action.remark; }
+                                                        }
+                                                        catch { }
+
+                                                        dataMail.mail_body = @"<span lang='en-US'>";
+                                                        dataMail.mail_body += "<div>";
+                                                        dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sDear + "</span></font></div>";
                                                         dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sDetail + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sTitle + "</span></font></div>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sBusinessDate + "</span></font></div>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     " + sLocation + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
+                                                        dataMail.mail_body += "     <span style='font-size:15pt;'>Traveler List : " + sTravelerList + "</span></font></div>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        if (sReasonRejected != "")
+                                                        {
+                                                            dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'>";
+                                                            dataMail.mail_body += "     " + sReasonRejected + "</font></div>";
+                                                            dataMail.mail_body += "     <br>";
+                                                        }
+                                                        dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     If you have any question please contact Business Travel Services Team (Tel. " + Tel_Services_Team + ").";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     For the application assistance, please contact PTT Digital Call Center (Tel. " + Tel_Call_Center + ").";
+                                                        dataMail.mail_body += "     </span></font></div>";
+
+                                                        dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     Best Regards,";
+                                                        dataMail.mail_body += "     <br>";
+                                                        dataMail.mail_body += "     Business Travel Services Team (PMSV)";
+                                                        dataMail.mail_body += "     </span></font></div>";
+
+                                                        dataMail.mail_body += "</div>";
+                                                        dataMail.mail_body += "</span>";
+                                                        mail.sendMail(dataMail);
+                                                        #endregion set mail
                                                     }
-                                                    dataMail.mail_body += "     <div style='margin:0 0 0 36pt;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     If you have any question please contact Business Travel Services Team (Tel. " + Tel_Services_Team + ").";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     For the application assistance, please contact PTT Digital Call Center (Tel. " + Tel_Call_Center + ").";
-                                                    dataMail.mail_body += "     </span></font></div>";
-
-                                                    dataMail.mail_body += "     <div style='margin:0;'><font face='Browallia New,sans-serif' size='4'><span style='font-size:15pt;'>";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     Best Regards,";
-                                                    dataMail.mail_body += "     <br>";
-                                                    dataMail.mail_body += "     Business Travel Services Team (PMSV)";
-                                                    dataMail.mail_body += "     </span></font></div>";
-
-                                                    dataMail.mail_body += "</div>";
-                                                    dataMail.mail_body += "</span>";
-                                                    mail.sendMail(dataMail);
-                                                    #endregion set mail
                                                 }
-
                                             }
                                             catch (Exception ex)
                                             {
@@ -5948,6 +7177,8 @@ namespace top.ebiz.service.Service.Create_trip
                                 {
 
                                     #region traveler mail in doc 
+                                    traveler_mail = "";
+
                                     sql = @" select distinct to_char(s.id) as id, nvl(b.ENTITLE,'')||' '||b.ENFIRSTNAME||' '||b.ENLASTNAME name1, b.email as name2 
                                                  , b.employeeid as name3, b.orgname as name4                     
                                                  from bz_doc_traveler_approver a
@@ -5955,15 +7186,21 @@ namespace top.ebiz.service.Service.Create_trip
                                                  left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s
                                                  on a.dh_code =s.dh_code and a.dta_travel_empid = s.dte_emp_id 
                                                  where a.dta_type = 2 and a.dta_action_status in (4) and a.dta_doc_status = 23
-                                                 and a.dh_code ='" + value.doc_id + "'  ";
+                                                 and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
-                                        sql += @" and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += @" and a.dta_appr_empid = :user_id_def ";
                                     }
                                     sql += @" order by s.id ";
 
-                                    traveler_mail = "";
-                                    var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    if (user_role != "1")
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    }
+                                    var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                     if (tempTravel != null)
                                     {
                                         foreach (var item in tempTravel)
@@ -5973,14 +7210,16 @@ namespace top.ebiz.service.Service.Create_trip
                                     }
                                     #endregion traveler mail in doc
                                     #region approver mail in doc 
+                                    approver_mail = "";
+
                                     sql = @" select distinct b.email                       
                                                  from bz_doc_traveler_approver a
                                                  inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                                  where a.dta_type = 2 and a.dta_action_status in (4) and a.dta_doc_status = 23
-                                                 and a.dh_code = '" + value.doc_id + "' ";
+                                                 and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
-                                        sql += " and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += " and a.dta_appr_empid = :user_id_def ";
                                     }
                                     sql += @" union ";
                                     sql += @" select distinct b.email                 
@@ -5988,14 +7227,21 @@ namespace top.ebiz.service.Service.Create_trip
                                              inner join bz_users b on a.dta_appr_empid = b.employeeid 
                                              where a.dta_type = 1 and a.dta_action_status in (3) and a.dta_doc_status = 32
                                              and ( a.dta_travel_empid, a.dh_code) in ( select distinct a1.dta_travel_empid, a1.dh_code from bz_doc_traveler_approver a1 where a1.dta_type = 2 and a1.dta_action_status in (4) and a1.dta_doc_status = 23  )
-                                             and a.dh_code = '" + value.doc_id + "' ";
+                                             and a.dh_code = :doc_id ";
                                     if (user_role != "1")
                                     {
                                         //หา line ที่อยู่ภายใต้ cap
-                                        sql += " and a.dta_appr_empid ='" + user_id + "' ";
+                                        sql += " and a.dta_appr_empid = :user_id_def ";
                                     }
-                                    approver_mail = "";
-                                    var approvermailList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                    if (user_role != "1")
+                                    {
+                                        parameters.Add(context.ConvertTypeParameter("user_id_def", user_id_def, "char"));
+                                    }
+                                    var approvermailList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                     if (approvermailList != null)
                                     {
                                         if (approvermailList.Count > 0)
@@ -6003,7 +7249,6 @@ namespace top.ebiz.service.Service.Create_trip
                                             //approver_mail = ";" + approvermailList[0].email; 
                                             for (int m = 0; m < approvermailList.Count; m++)
                                             {
-                                                //if (approver_mail != "") { approver_mail += ";"; }
                                                 approver_mail += ";" + approvermailList[m].email;
                                             }
                                         }
@@ -6020,15 +7265,6 @@ namespace top.ebiz.service.Service.Create_trip
                                         {
                                             sBusinessDate = "Business Date : " + dateFromTo(doc_head_search.DH_BUS_FROMDATE?.ToString("yyyy-MM-dd", new System.Globalization.CultureInfo("en-US")), doc_head_search.DH_BUS_TODATE?.ToString("yyyy-MM-dd", new System.Globalization.CultureInfo("en-US"))) ?? "";
                                         }
-
-                                        //sql = @"  select distinct case when substr(tv.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,tv.city_text as name2    
-                                        //             FROM bz_doc_traveler_expense tv inner join BZ_DOC_HEAD h on h.dh_code=tv.dh_code
-                                        //             inner join BZ_USERS U on tv.DTE_Emp_Id = u.employeeid
-                                        //             left join bz_master_country c on tv.ct_id = c.ct_id
-                                        //             left join BZ_MASTER_PROVINCE p on tv.PV_ID = p.PV_ID
-                                        //             WHERE tv.dh_code in ('" + value.doc_id + "') and tv.dte_status = 1 ";
-                                        //sql += " and tv.dte_cap_appr_status  = '" + doc_status + "'";
-
                                         sql = @"  select distinct to_char(s.id) as id, case when substr(a.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,a.city_text as name2    
                                                      FROM bz_doc_traveler_expense a inner join BZ_DOC_HEAD h on h.dh_code=a.dh_code
                                                      inner join BZ_USERS U on a.DTE_Emp_Id = u.employeeid
@@ -6037,10 +7273,13 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                        sql += " and a.dte_cap_appr_status  = '" + doc_status + "'  order by s.id ";
+                                                     WHERE a.dh_code = :doc_id and a.dte_status = 1  and a.dte_cap_appr_status  = :doc_status  order by s.id ";
 
-                                        var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                        parameters = new List<OracleParameter>();
+                                        parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                        parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                        var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                         if (temp != null && temp.Count() > 0)
                                         {
                                             //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -6072,21 +7311,24 @@ namespace top.ebiz.service.Service.Create_trip
 
                                         sDear = "Dear All,";
 
-                                        sDetail = "Your business travel request has been revise by " + login_empid[0].user_name + ". To view the details, click ";
+                                        sDetail = "Your business travel request has been revise by " + user_name + ". To view the details, click ";
                                         sDetail += "<a href='" + (LinkLogin + "i").Replace("###", value.doc_id) + "'>" + value.doc_id + "</a>";
 
-                                        var iNo = 1;
-                                        sTravelerList = "<table>";
-                                        foreach (var item in tempTravel)
+                                        if (tempTravel != null && tempTravel?.Count > 0)
                                         {
-                                            sTravelerList += " <tr>";
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
-                                            sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
-                                            sTravelerList += " </tr>";
-                                            iNo++;
+                                            var iNo = 1;
+                                            sTravelerList = "<table>";
+                                            foreach (var item in tempTravel)
+                                            {
+                                                sTravelerList += " <tr>";
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 20pt;font-size:15pt;'>" + iNo + ") " + item.name1 + "</span></font></td>";//1) [Title_Name of traveler] 
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name3 + "</span></font></td>";//Emp. ID
+                                                sTravelerList += " <td><font face='Browallia New,sans-serif' size='4'><span style='margin:0 0 0 36pt;font-size:15pt;'>" + item.name4 + "</span></font></td>";//SEC./DEP./FUNC. 
+                                                sTravelerList += " </tr>";
+                                                iNo++;
+                                            }
+                                            sTravelerList += "</table>";
                                         }
-                                        sTravelerList += "</table>";
 
                                         #region set mail
                                         try
@@ -6166,16 +7408,11 @@ namespace top.ebiz.service.Service.Create_trip
                                         //cc : Super Admin +PMDV Admin
                                         try
                                         {
-                                            admin_mail = "";
-                                            var role_type = "pmsv_admin";
-                                            if (doc_head_search.DH_TYPE == "overseatraining" || doc_head_search.DH_TYPE == "localtraining")
-                                            {
-                                                role_type = "pmdv_admin";
-                                            }
-                                            sql = "SELECT EMPLOYEEID user_id, EMAIL email ";
-                                            sql += "FROM bz_users WHERE role_id = 1 ";
-                                            //sql += " or lower(userid) in (select lower(user_id) as userid from bz_data_manage where " + role_type + " = 'true') ";
-                                            adminList = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                            sql = "SELECT EMPLOYEEID user_id, EMAIL email FROM bz_users WHERE role_id = :role_id ";
+                                            var role_id = "1";
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("role_id", role_id, "char"));
+                                            var adminList = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                                             if (adminList != null)
                                             {
@@ -6186,9 +7423,10 @@ namespace top.ebiz.service.Service.Create_trip
                                                 if (admin_mail != "")
                                                     admin_mail = ";" + admin_mail.Substring(1);
                                             }
+
                                             //กรณีที่เป็น pmdv admin, pmsv_admin
                                             admin_mail += mail_group_admin(context, "pmsv_admin");
-                                            if (value.doc_id.IndexOf("T") > -1)
+                                            if (doc_id.IndexOf("T") > -1)
                                             {
                                                 admin_mail += mail_group_admin(context, "pmdv_admin");
                                             }
@@ -6198,8 +7436,11 @@ namespace top.ebiz.service.Service.Create_trip
                                                      from BZ_DOC_TRAVELER_EXPENSE a left join bz_users b on a.DTE_EMP_ID = b.employeeid
                                                      left join (select min(dte_id) as id, dh_code, dte_emp_id  from BZ_DOC_TRAVELER_EXPENSE group by dh_code, dte_emp_id ) s
                                                      on a.dh_code =s.dh_code and a.dte_emp_id = s.dte_emp_id 
-                                                     where a.dh_code = '" + value.doc_id + "' order by s.id ";
-                                            var tempTravel = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                                     where a.dh_code = :doc_id order by s.id ";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var tempTravel = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
 
                                             sTitle = "Title : " + doc_head_search.DH_TOPIC ?? "";
                                             sBusinessDate = "Business Date : ";
@@ -6207,14 +7448,6 @@ namespace top.ebiz.service.Service.Create_trip
                                             {
                                                 sBusinessDate = "Business Date : " + dateFromTo(doc_head_search.DH_BUS_FROMDATE?.ToString("yyyy-MM-dd", new System.Globalization.CultureInfo("en-US")), doc_head_search.DH_BUS_TODATE?.ToString("yyyy-MM-dd", new System.Globalization.CultureInfo("en-US"))) ?? "";
                                             }
-
-                                            //sql = @"  select distinct case when substr(tv.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,tv.city_text as name2    
-                                            //         FROM bz_doc_traveler_expense tv inner join BZ_DOC_HEAD h on h.dh_code=tv.dh_code
-                                            //         inner join BZ_USERS U on tv.DTE_Emp_Id = u.employeeid
-                                            //         left join bz_master_country c on tv.ct_id = c.ct_id
-                                            //         left join BZ_MASTER_PROVINCE p on tv.PV_ID = p.PV_ID
-                                            //         WHERE tv.dh_code in ('" + value.doc_id + "') and tv.dte_status = 1 ";
-                                            //sql += " and tv.dte_cap_appr_status  = '" + doc_status + "'";
 
                                             sql = @"  select distinct to_char(s.id) as id, case when substr(a.dh_code,0,1) = 'L' then p.pv_name else c.ct_name end name1 ,a.city_text as name2    
                                                      FROM bz_doc_traveler_expense a inner join BZ_DOC_HEAD h on h.dh_code=a.dh_code
@@ -6224,10 +7457,13 @@ namespace top.ebiz.service.Service.Create_trip
                                                      left join ( select min(dte_id) as id, dh_code, ctn_id, pv_id, city_text from BZ_DOC_TRAVELER_EXPENSE group by dh_code, ctn_id, pv_id, city_text
                                                      ) s on a.dh_code = s.dh_code and a.ctn_id = s.ctn_id 
                                                      and (case when a.pv_id is null then 1 else a.pv_id end = case when a.pv_id is null then 1 else s.pv_id end) and a.city_text = s.city_text
-                                                     WHERE a.dh_code in ('" + value.doc_id + "') and a.dte_status = 1 ";
-                                            sql += " and a.dte_cap_appr_status  = '" + doc_status + "'  order by s.id ";
+                                                     WHERE a.dh_code = :doc_id and a.dte_status = 1 and a.dte_cap_appr_status  = :doc_status order by s.id ";
 
-                                            var temp = context.Database.SqlQuery<tempModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            parameters.Add(context.ConvertTypeParameter("doc_status", doc_status, "char"));
+                                            var temp = context.TempModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             if (temp != null && temp.Count() > 0)
                                             {
                                                 //dataMail.mail_body += "Location : " + temp[0].name1 + "/" + temp[0].name2;
@@ -6250,18 +7486,20 @@ namespace top.ebiz.service.Service.Create_trip
                                             sendEmailService mail = new sendEmailService();
                                             sendEmailModel dataMail = new sendEmailModel();
 
-                                            sql = " select distinct u.email ";
-                                            sql += " from bz_users u inner ";
-                                            sql += " join ";
-                                            sql += " ( ";
-                                            sql += "      select dh_create_by user_id from bz_doc_head where dh_code = '" + value.doc_id + "' ";
-                                            sql += "      union ";
-                                            sql += "      select dh_initiator_empid user_id from bz_doc_head where dh_code = '" + value.doc_id + "' ";
-                                            sql += "      union ";
-                                            sql += "      select DTE_EMP_ID user_id from BZ_DOC_TRAVELER_EXPENSE where dh_code = '" + value.doc_id + "' ";
-                                            sql += " ) u2 on u.employeeid = u2.user_id ";
+                                            sql = @" select distinct u.email,u2.dh_code from bz_users u  
+                                                     inner join (  
+                                                      select dh_create_by user_id, dh_code from bz_doc_head 
+                                                       union 
+                                                       select dh_initiator_empid user_id, dh_code from bz_doc_head
+                                                       union
+                                                       select DTE_EMP_ID user_id, dh_code from BZ_DOC_TRAVELER_EXPENSE 
+                                                       ) u2 on u.employeeid = u2.user_id  
+                                                       where  u2.dh_code = :doc_id ";
 
-                                            var empapp = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                                            var empapp = context.SearchUserModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
                                             foreach (var e in empapp)
                                             {
                                                 dataMail.mail_to += e.email + ";";
@@ -6284,7 +7522,8 @@ namespace top.ebiz.service.Service.Create_trip
                                                     else
                                                     {
                                                         string file_name = file_Approval_Output_form;// @"temp\APPROVAL_FORM_OT21060025_2021100410233333.xlsx";
-                                                        string _FolderMailAttachments = System.Configuration.ConfigurationManager.AppSettings["FilePathServerApp"].ToString();//d:\Ebiz2\Ebiz_App\
+                                                        //string _FolderMailAttachments = System.Configuration.ConfigurationManager.AppSettings["FilePathServerApp"].ToString();//d:\Ebiz2\Ebiz_App\
+                                                        string _FolderMailAttachments = configApp.GetStringFromAppSettings("FilePathServerApp") ?? "";
                                                         string mail_attachments = _FolderMailAttachments + file_name;
                                                         dataMail.mail_attachments = mail_attachments;
                                                     }
@@ -6423,34 +7662,19 @@ namespace top.ebiz.service.Service.Create_trip
             return data;
         }
 
-        public string mail_group_admin(TOPEBizEntities context, string field)
-        {
-            var admin_mail = "";
-            //var sql = @" select emp_id as user_id, email from bz_data_manage where (pmsv_admin = 'true' or pmdv_admin = 'true')  ";
-            var sql = @" select a.emp_id as user_id, u.email
-                         from bz_data_manage a inner join vw_bz_users u on a.emp_id = u.employeeid where " + field + " = 'true' ";
 
-            var adminlistall = context.Database.SqlQuery<SearchUserModel>(sql).ToList();
-            if (adminlistall != null)
-            {
-                if (adminlistall.Count > 0)
-                {
-                    foreach (var item in adminlistall)
-                    {
-                        admin_mail += ";" + item.email;
-                    }
-                }
-            }
-            return admin_mail;
-        }
-
-        private void Set_Trip_Complated(TOPEBizEntities context, string token_login, string doc_id)
+        private void Set_Trip_Complated(TOPEBizCreateTripEntities context, string token_login, string doc_id)
         {
             try
             {
                 //select dh_code, dh_type from BZ_DOC_TRIP_COMPLETED 
-                string sqlstr = "insert into BZ_DOC_TRIP_COMPLETED select dh_code, dh_type from BZ_DOC_HEAD where dh_code = '" + doc_id + "' ";
-                context.Database.ExecuteSqlCommand(sqlstr);
+                string sql = "insert into BZ_DOC_TRIP_COMPLETED select dh_code, dh_type from BZ_DOC_HEAD where dh_code = :doc_id ";
+
+                var parameters = new List<OracleParameter>();
+                parameters.Add(context.ConvertTypeParameter("doc_id", doc_id, "char"));
+                var iret = context.Database.ExecuteSqlRaw(sql, parameters.ToArray());
+                if (iret > 0) { }
+
                 context.SaveChanges();
             }
             catch { }
@@ -6813,86 +8037,106 @@ namespace top.ebiz.service.Service.Create_trip
 
         public DocFileListModel uploadfile()
         {
-            // file_token_login,file_doc,
-            // DH_CODE, DF_ID, DF_NAME, DF_PATH, DF_REMARK
-            var data = new DocFileListModel();
-            DataTable dtdef = new DataTable();
-            HttpResponse response = HttpContext.Current.Response;
-            HttpFileCollection files = HttpContext.Current.Request.Files;
+            //??? ต้องปรับ function ใหม่ 
 
+            //    // file_token_login,file_doc,
+            //    // DH_CODE, DF_ID, DF_NAME, DF_PATH, DF_REMARK
+            //    var data = new DocFileListModel();
+            //    DataTable dtdef = new DataTable();
+
+            //    var files = HttpContext.Request.Form.Files;
+
+
+            //    string msg_error = "";
+            //    string msg_rows = "";
+            //    string ret = "";
+            //    string _FullPathName = "";//System.Web.HttpContext.Current.Server.MapPath("~/temp/docxx/" + file.FileName);
+            //    string _FileName = "";
+            //    //string _Server_path = System.Configuration.ConfigurationManager.AppSettings["ServerPath_API"].ToString();
+            //    TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities();
+            //    string _Server_path =context.GetServerPathAPIFromAppSettings() ;
+
+            //    if (files == null)
+            //    {
+            //        msg_error = "Select a file to upload.";
+            //        goto next_line_1;
+            //    }
+            //    if (files.Count == 0)
+            //    {
+            //        msg_error = "Select a file to upload.";
+            //        goto next_line_1;
+            //    }
+
+            //    try
+            //    { 
+            //        var httpRequest = HttpContext.Current.Request;
+            //        var file_doc = "";
+            //        var file_token_login = "";
+
+            //        try
+            //        {
+            //            msg_rows = "error data : file_token_login ";
+            //            file_token_login = httpRequest.Form["file_token_login"].ToString();
+            //        }
+            //        catch { }
+
+            //        msg_rows = "error data : file_doc ";
+            //        file_doc = httpRequest.Form["file_doc"].ToString();
+            //        msg_rows = "";
+
+            //        var _Path = Path.Combine(Directory.GetCurrentDirectory(), "temp", file_doc.ToString());
+
+            //        #region Determine whether the directory exists.
+            //        try
+            //        {
+            //            DirectoryInfo di = Directory.CreateDirectory(_Path);
+            //            for (int i = 0; i < files.Count; i++)
+            //            {
+            //                HttpPostedFile file = files[i];
+            //                _FileName = file.FileName;
+            //                file.SaveAs(_Path + _FileName);
+            //                ret = "true";
+            //            }
+
+            //        }
+            //        catch (Exception ex) { msg_error = ex.Message.ToString(); }
+
+            //        #endregion Determine whether the directory exists.
+
+            //        if ((ret ?? "") == "true")
+            //        {
+            //            // DH_CODE, DF_ID, DF_NAME, DF_PATH, DF_REMARK
+            //            data.DH_CODE = file_doc;
+            //            data.DF_NAME = _FileName;
+            //            data.DF_PATH = _Server_path + _Folder;
+            //        }
+            //        else
+            //        {
+            //            data.DH_CODE = file_doc;
+            //            data.DF_NAME = "";
+            //            data.DF_PATH = "";
+            //        }
+            //    }
+            //    catch (Exception ex_msg) { msg_error = ex_msg.Message.ToString() + " ---- " + msg_rows; }
+
+            //next_line_1:;
+
+            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            //data.after_trip.opt2 = new subAfterTripModel();
+            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
+            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            //data.after_trip.opt3 = new subAfterTripModel();
+            //data.after_trip.opt3.status = "SaveAs FullPathName";
+            //data.after_trip.opt3.remark = _FullPathName;
+
+
+
+            //??? แก้ไขเพื่อให้ run ผ่านก่อน
+            var data = new DocFileListModel(); 
             string msg_error = "";
             string msg_rows = "";
             string ret = "";
-            string _FullPathName = "";//System.Web.HttpContext.Current.Server.MapPath("~/temp/docxx/" + file.FileName);
-            string _FileName = "";
-            string _Server_path = System.Configuration.ConfigurationManager.AppSettings["ServerPath_API"].ToString();
-
-            if (files == null)
-            {
-                msg_error = "Select a file to upload.";
-                goto next_line_1;
-            }
-            if (files.Count == 0)
-            {
-                msg_error = "Select a file to upload.";
-                goto next_line_1;
-            }
-
-            try
-            {
-                var httpRequest = HttpContext.Current.Request;
-                var file_doc = "";
-                var file_token_login = "";
-
-                try
-                {
-                    msg_rows = "error data : file_token_login ";
-                    file_token_login = httpRequest.Form["file_token_login"].ToString();
-                }
-                catch { }
-
-                msg_rows = "error data : file_doc ";
-                file_doc = httpRequest.Form["file_doc"].ToString();
-                msg_rows = "";
-
-                string _Folder = "/temp/" + file_doc + "/";
-                string _Path = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
-
-                #region Determine whether the directory exists.
-                try
-                {
-                    DirectoryInfo di = Directory.CreateDirectory(_Path);
-                    for (int i = 0; i < files.Count; i++)
-                    {
-                        HttpPostedFile file = files[i];
-                        _FileName = file.FileName;
-                        file.SaveAs(_Path + _FileName);
-                        ret = "true";
-                    }
-
-                }
-                catch (Exception ex) { msg_error = ex.Message.ToString(); }
-
-                #endregion Determine whether the directory exists.
-
-                if ((ret ?? "") == "true")
-                {
-                    // DH_CODE, DF_ID, DF_NAME, DF_PATH, DF_REMARK
-                    data.DH_CODE = file_doc;
-                    data.DF_NAME = _FileName;
-                    data.DF_PATH = _Server_path + _Folder;
-                }
-                else
-                {
-                    data.DH_CODE = file_doc;
-                    data.DF_NAME = "";
-                    data.DF_PATH = "";
-                }
-            }
-            catch (Exception ex_msg) { msg_error = ex_msg.Message.ToString() + " ---- " + msg_rows; }
-
-        next_line_1:;
-
+            string _FullPathName = "";
 
             data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
             data.after_trip.opt2 = new subAfterTripModel();
