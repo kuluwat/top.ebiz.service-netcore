@@ -14,8 +14,8 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class loginController : ControllerBase
     {
         // GET: api/loginWeb
@@ -31,7 +31,8 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
         }
 
         // POST: api/loginWeb
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("login", Name = "login")]
 public IActionResult Post([FromBody]loginModel value)
         {
             if (value == null) return null;

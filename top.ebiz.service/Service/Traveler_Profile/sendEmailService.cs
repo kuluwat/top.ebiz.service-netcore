@@ -10,6 +10,7 @@ using System.DirectoryServices;
 using System.IO;
 using Microsoft.Exchange.WebServices.Data;
 using top.ebiz.service.Models.Traveler_Profile;
+using System.Net.Mail;
 //using System.Web.Script.Serialization;
 
 namespace top.ebiz.service.Service.Traveler_Profile 
@@ -36,9 +37,9 @@ namespace top.ebiz.service.Service.Traveler_Profile
         #region  emailconfig  
         public string send_mail_bk(string s_mail_to, string s_mail_cc, string s_subject, string s_mail_body, string s_mail_attachments)
         {
-            string mail_test = ConfigurationManager.AppSettings["MailTest"].ToString();
-            string mail_server = ConfigurationManager.AppSettings["MailSMTPServer"].ToString();
-            string mail_from = ConfigurationManager.AppSettings["MailFrom"].ToString();
+            string mail_test = System.Configuration.ConfigurationManager.AppSettings["MailTest"].ToString();
+            string mail_server = System.Configuration.ConfigurationManager.AppSettings["MailSMTPServer"].ToString();
+            string mail_from = System.Configuration.ConfigurationManager.AppSettings["MailFrom"].ToString();
             if (mail_test != "")
             {
                 s_mail_body += "</br>ข้อมูล mail to: " + s_mail_to + "</br></br>ข้อมูล mail cc: " + s_mail_cc;
@@ -48,16 +49,18 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             #region send
             MailPriority mailPriority = MailPriority.Normal; //High / Low/ Normal;
-            MailFormat mailFormat = MailFormat.Html;
+            //MailFormat mailFormat = MailFormat.Html;
             MailMessage objEmail;
 
             System.Net.Mail.MailAddress smailFrom = new System.Net.Mail.MailAddress(mail_from, "Thaioil workflow system [Do not reply]");
-            objEmail = new MailMessage();
-            objEmail.From = smailFrom.ToString();
-            objEmail.To = s_mail_to.ToString();
-            objEmail.Cc = s_mail_cc.ToString();
-            objEmail.Subject = s_subject;
-            objEmail.Body = s_mail_body;
+            //objEmail = new MailMessage
+            //{
+            //    From = smailFrom,
+            //    To = s_mail_to,
+            //    Cc = s_mail_cc.ToString(),
+            //    Subject = s_subject,
+            //    Body = s_mail_body
+            //};
 
             try
             {
@@ -85,12 +88,12 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             catch (Exception ex) { return ex.Message.ToString(); }
 
-            objEmail.Priority = mailPriority;
-            objEmail.BodyFormat = mailFormat;
-            SmtpMail.SmtpServer = mail_server;
+            //objEmail.Priority = mailPriority;
+            //objEmail.BodyFormat = mailFormat;
+            //SmtpMail.SmtpServer = mail_server;
             try
             {
-                SmtpMail.Send(objEmail);
+                //SmtpMail.Send(objEmail);
                 return "";
             }
             catch (Exception ex)
@@ -107,11 +110,11 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             String msg_mail = "";
             Boolean SendAndSaveCopy = false;
-            string mail_server = ConfigurationManager.AppSettings["MailSMTPServer"].ToString();
-            string mail_from = ConfigurationManager.AppSettings["MailFrom"].ToString();
-            string mail_test = ConfigurationManager.AppSettings["MailTest"].ToString();
-            string mail_user = ConfigurationManager.AppSettings["MailUser"].ToString();
-            string mail_password = ConfigurationManager.AppSettings["MailPassword"].ToString();
+            string mail_server = System.Configuration.ConfigurationManager.AppSettings["MailSMTPServer"].ToString();
+            string mail_from = System.Configuration.ConfigurationManager.AppSettings["MailFrom"].ToString();
+            string mail_test = System.Configuration.ConfigurationManager.AppSettings["MailTest"].ToString();
+            string mail_user = System.Configuration.ConfigurationManager.AppSettings["MailUser"].ToString();
+            string mail_password = System.Configuration.ConfigurationManager.AppSettings["MailPassword"].ToString();
             //bool SendAndSaveCopy = Convert.ToBoolean(ConfigurationManager.AppSettings["MailSendAndSaveCopy"].ToString());
 
             if (mail_test != "")
@@ -123,9 +126,11 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 s_mail_cc = mail_test;
             }
 
-            ExchangeService service = new ExchangeService();
-            service.Credentials = new WebCredentials(mail_user, mail_password);
-            service.TraceEnabled = true;
+            ExchangeService service = new ExchangeService
+            {
+                Credentials = new WebCredentials(mail_user, mail_password),
+                TraceEnabled = true
+            };
 
 
             EmailMessage email = new EmailMessage(service);
@@ -212,39 +217,43 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 String str = String.Format("LDAP://{0}", domain);
                 String str2 = String.Format(("{0}\\" + UserName.Trim()), domain);
                 String pass = Password;
-                DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
-                DirectorySearcher search = new DirectorySearcher(Entry);
-                search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))";
-                search.PropertiesToLoad.Add("samaccountname");
-                search.PropertiesToLoad.Add("mail");
-                search.PropertiesToLoad.Add("usergroup");
-                search.PropertiesToLoad.Add("displayname");//first name
-                search.PropertiesToLoad.Add("memberOf");
-                SearchResult result;
-                SearchResultCollection resultCol = search.FindAll();
+                //DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
+                //DirectorySearcher search = new DirectorySearcher(Entry)
+                {
+                    //Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))"
+                };
+                //search.PropertiesToLoad.Add("samaccountname");
+                //search.PropertiesToLoad.Add("mail");
+                //search.PropertiesToLoad.Add("usergroup");
+                //search.PropertiesToLoad.Add("displayname");//first name
+                //search.PropertiesToLoad.Add("memberOf");
+                //SearchResult result;
+                //SearchResultCollection resultCol = search.FindAll();
 
                 //SearchResult xxx = search.FindOne();
-                if (resultCol != null)
-                {
-                    for (int counter = 0; counter < resultCol.Count; counter++)
-                    {
-                        string UserNameEmailString = string.Empty;
-                        result = resultCol[counter];
-                        if (result.Properties.Contains("samaccountname") &&
-                                 result.Properties.Contains("mail") &&
-                            result.Properties.Contains("displayname"))
-                        {
+                //if (resultCol != null)
+                //{
+                //    for (int counter = 0; counter < resultCol.Count; counter++)
+                //    {
+                //        string UserNameEmailString = string.Empty;
+                //        result = resultCol[counter];
+                //        if (result.Properties.Contains("samaccountname") &&
+                //                 result.Properties.Contains("mail") &&
+                //            result.Properties.Contains("displayname"))
+                //        {
 
-                            Users objSurveyUsers = new Users();
-                            objSurveyUsers.Email = (String)result.Properties["mail"][0];
-                            objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
-                            objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
-                            objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
-                            lstADUsers.Add(objSurveyUsers);
-                        }
+                //            Users objSurveyUsers = new Users
+                //            {
+                //                Email = (String)result.Properties["mail"][0],
+                //                UserName = (String)result.Properties["samaccountname"][0],
+                //                DisplayName = (String)result.Properties["displayname"][0],
+                //                MemberOf = (String)result.Properties["memberOf"][0]
+                //            };
+                //            lstADUsers.Add(objSurveyUsers);
+                //        }
 
-                    }
-                }
+                //    }
+                //}
 
 
             }
@@ -276,39 +285,43 @@ namespace top.ebiz.service.Service.Traveler_Profile
                             String str = String.Format("LDAP://{0}", domain);
                             String str2 = String.Format(("{0}\\" + UserName.Trim()), domain);
                             String pass = Password;
-                            DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
-                            DirectorySearcher search = new DirectorySearcher(Entry);
-                            search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))";
-                            search.PropertiesToLoad.Add("samaccountname");
-                            search.PropertiesToLoad.Add("mail");
-                            search.PropertiesToLoad.Add("usergroup");
-                            search.PropertiesToLoad.Add("displayname");//first name
-                            search.PropertiesToLoad.Add("memberOf");
-                            SearchResult result;
-                            SearchResultCollection resultCol = search.FindAll();
+                            //DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
+                            //DirectorySearcher search = new DirectorySearcher(Entry)
+                            //{
+                            //    Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))"
+                            //};
+                            //search.PropertiesToLoad.Add("samaccountname");
+                            //search.PropertiesToLoad.Add("mail");
+                            //search.PropertiesToLoad.Add("usergroup");
+                            //search.PropertiesToLoad.Add("displayname");//first name
+                            //search.PropertiesToLoad.Add("memberOf");
+                            //SearchResult result;
+                            //SearchResultCollection resultCol = search.FindAll();
 
-                            //SearchResult xxx = search.FindOne();
-                            if (resultCol != null)
-                            {
-                                for (int counter = 0; counter < resultCol.Count; counter++)
-                                {
-                                    string UserNameEmailString = string.Empty;
-                                    result = resultCol[counter];
-                                    if (result.Properties.Contains("samaccountname") &&
-                                             result.Properties.Contains("mail") &&
-                                        result.Properties.Contains("displayname"))
-                                    {
+                            ////SearchResult xxx = search.FindOne();
+                            //if (resultCol != null)
+                            //{
+                            //    for (int counter = 0; counter < resultCol.Count; counter++)
+                            //    {
+                            //        string UserNameEmailString = string.Empty;
+                            //        result = resultCol[counter];
+                            //        if (result.Properties.Contains("samaccountname") &&
+                            //                 result.Properties.Contains("mail") &&
+                            //            result.Properties.Contains("displayname"))
+                            //        {
 
-                                        Users objSurveyUsers = new Users();
-                                        objSurveyUsers.Email = (String)result.Properties["mail"][0];
-                                        objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
-                                        objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
-                                        objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
-                                        lstADUsers.Add(objSurveyUsers);
-                                    }
+                            //            Users objSurveyUsers = new Users
+                            //            {
+                            //                Email = (String)result.Properties["mail"][0],
+                            //                UserName = (String)result.Properties["samaccountname"][0],
+                            //                DisplayName = (String)result.Properties["displayname"][0],
+                            //                MemberOf = (String)result.Properties["memberOf"][0]
+                            //            };
+                            //            lstADUsers.Add(objSurveyUsers);
+                            //        }
 
-                                }
-                            }
+                            //    }
+                            //}
 
 
                         }
@@ -349,39 +362,43 @@ namespace top.ebiz.service.Service.Traveler_Profile
                             String str = String.Format("LDAP://{0}", domain);
                             String str2 = String.Format(("{0}\\" + UserName.Trim()), domain);
                             String pass = Password;
-                            DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
-                            DirectorySearcher search = new DirectorySearcher(Entry);
-                            search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))";
-                            search.PropertiesToLoad.Add("samaccountname");
-                            search.PropertiesToLoad.Add("mail");
-                            search.PropertiesToLoad.Add("usergroup");
-                            search.PropertiesToLoad.Add("displayname");//first name
-                            search.PropertiesToLoad.Add("memberOf");
-                            SearchResult result;
-                            SearchResultCollection resultCol = search.FindAll();
+                            //DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
+                            //DirectorySearcher search = new DirectorySearcher(Entry)
+                            //{
+                            //    Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))"
+                            //};
+                            //search.PropertiesToLoad.Add("samaccountname");
+                            //search.PropertiesToLoad.Add("mail");
+                            //search.PropertiesToLoad.Add("usergroup");
+                            //search.PropertiesToLoad.Add("displayname");//first name
+                            //search.PropertiesToLoad.Add("memberOf");
+                            //SearchResult result;
+                            //SearchResultCollection resultCol = search.FindAll();
 
-                            //SearchResult xxx = search.FindOne();
-                            if (resultCol != null)
-                            {
-                                for (int counter = 0; counter < resultCol.Count; counter++)
-                                {
-                                    string UserNameEmailString = string.Empty;
-                                    result = resultCol[counter];
-                                    if (result.Properties.Contains("samaccountname") &&
-                                             result.Properties.Contains("mail") &&
-                                        result.Properties.Contains("displayname"))
-                                    {
+                            ////SearchResult xxx = search.FindOne();
+                            //if (resultCol != null)
+                            //{
+                            //    for (int counter = 0; counter < resultCol.Count; counter++)
+                            //    {
+                            //        string UserNameEmailString = string.Empty;
+                            //        result = resultCol[counter];
+                            //        if (result.Properties.Contains("samaccountname") &&
+                            //                 result.Properties.Contains("mail") &&
+                            //            result.Properties.Contains("displayname"))
+                            //        {
 
-                                        Users objSurveyUsers = new Users();
-                                        objSurveyUsers.Email = (String)result.Properties["mail"][0];
-                                        objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
-                                        objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
-                                        objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
-                                        lstADUsers.Add(objSurveyUsers);
-                                    }
+                            //            Users objSurveyUsers = new Users
+                            //            {
+                            //                Email = (String)result.Properties["mail"][0],
+                            //                UserName = (String)result.Properties["samaccountname"][0],
+                            //                DisplayName = (String)result.Properties["displayname"][0],
+                            //                MemberOf = (String)result.Properties["memberOf"][0]
+                            //            };
+                            //            lstADUsers.Add(objSurveyUsers);
+                            //        }
 
-                                }
-                            }
+                            //    }
+                            //}
 
 
                         }
@@ -456,12 +473,16 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
 
             data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt2 = new subAfterTripModel
+            {
+                status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.",
+                remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error
+            };
+            data.after_trip.opt3 = new subAfterTripModel
+            {
+                status = "Error msg",
+                remark = msg_error
+            };
 
             return data;
         }
@@ -495,14 +516,16 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     List<emailList> email_list = new List<emailList>();
                     for (int i = 0; i < dtemp.Rows.Count; i++)
                     {
-                        emailList deflist = new emailList();
-                        deflist.id = (i + 1).ToString();
-                        deflist.doc_id = doc_id;
-                        deflist.emp_id = dtemp.Rows[i]["emp_id"].ToString();
-                        deflist.emp_name = dtemp.Rows[i]["emp_name"].ToString();
-                        deflist.email = dtemp.Rows[i]["email"].ToString();
-                        deflist.email_status = "";
-                        deflist.email_msg = "";
+                        emailList deflist = new emailList
+                        {
+                            id = (i + 1).ToString(),
+                            doc_id = doc_id,
+                            emp_id = dtemp.Rows[i]["emp_id"].ToString(),
+                            emp_name = dtemp.Rows[i]["emp_name"].ToString(),
+                            email = dtemp.Rows[i]["email"].ToString(),
+                            email_status = "",
+                            email_msg = ""
+                        };
                         email_list.Add(deflist);
                     }
                     data.email_list = email_list;
@@ -570,14 +593,16 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     {
                         if (emp_id == dtemp.Rows[i]["emp_id"].ToString() || user_admin == true)
                         {
-                            emailList deflist = new emailList();
-                            deflist.id = (i + 1).ToString();
-                            deflist.doc_id = doc_id;
-                            deflist.emp_id = dtemp.Rows[i]["emp_id"].ToString();
-                            deflist.emp_name = dtemp.Rows[i]["emp_name"].ToString();
-                            deflist.email = dtemp.Rows[i]["email"].ToString();
-                            deflist.email_status = "";
-                            deflist.email_msg = "";
+                            emailList deflist = new emailList
+                            {
+                                id = (i + 1).ToString(),
+                                doc_id = doc_id,
+                                emp_id = dtemp.Rows[i]["emp_id"].ToString(),
+                                emp_name = dtemp.Rows[i]["emp_name"].ToString(),
+                                email = dtemp.Rows[i]["email"].ToString(),
+                                email_status = "",
+                                email_msg = ""
+                            };
                             email_list.Add(deflist);
                         }
                     }
@@ -664,14 +689,16 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 List<emailList> email_list = new List<emailList>();
                 for (int i = 0; i < dtemp.Rows.Count; i++)
                 {
-                    emailList deflist = new emailList();
-                    deflist.id = (i + 1).ToString();
-                    deflist.doc_id = doc_id;
-                    deflist.emp_id = "";
-                    deflist.emp_name = dtemp.Rows[i]["key_value"].ToString();
-                    deflist.email = dtemp.Rows[i]["key_email"].ToString();
-                    deflist.email_status = "";
-                    deflist.email_msg = "";
+                    emailList deflist = new emailList
+                    {
+                        id = (i + 1).ToString(),
+                        doc_id = doc_id,
+                        emp_id = "",
+                        emp_name = dtemp.Rows[i]["key_value"].ToString(),
+                        email = dtemp.Rows[i]["key_email"].ToString(),
+                        email_status = "",
+                        email_msg = ""
+                    };
                     email_list.Add(deflist);
                 }
                 data.email_list = email_list;
@@ -744,14 +771,16 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     List<emailList> email_list = new List<emailList>();
                     for (int i = 0; i < dtemp.Rows.Count; i++)
                     {
-                        emailList deflist = new emailList();
-                        deflist.id = (i + 1).ToString();
-                        deflist.doc_id = doc_id;
-                        deflist.emp_id = dtemp.Rows[i]["emp_id"].ToString();
-                        deflist.emp_name = dtemp.Rows[i]["emp_name"].ToString();
-                        deflist.email = dtemp.Rows[i]["email"].ToString();
-                        deflist.email_status = "";
-                        deflist.email_msg = "";
+                        emailList deflist = new emailList
+                        {
+                            id = (i + 1).ToString(),
+                            doc_id = doc_id,
+                            emp_id = dtemp.Rows[i]["emp_id"].ToString(),
+                            emp_name = dtemp.Rows[i]["emp_name"].ToString(),
+                            email = dtemp.Rows[i]["email"].ToString(),
+                            email_status = "",
+                            email_msg = ""
+                        };
                         email_list.Add(deflist);
                     }
                     data.email_list = email_list;
@@ -817,14 +846,16 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     List<emailList> email_list = new List<emailList>();
                     for (int i = 0; i < dtemp.Rows.Count; i++)
                     {
-                        emailList deflist = new emailList();
-                        deflist.id = (i + 1).ToString();
-                        deflist.doc_id = doc_id;
-                        deflist.emp_id = dtemp.Rows[i]["emp_id"].ToString();
-                        deflist.emp_name = dtemp.Rows[i]["emp_name"].ToString();
-                        deflist.email = dtemp.Rows[i]["email"].ToString();
-                        deflist.email_status = "";
-                        deflist.email_msg = "";
+                        emailList deflist = new emailList
+                        {
+                            id = (i + 1).ToString(),
+                            doc_id = doc_id,
+                            emp_id = dtemp.Rows[i]["emp_id"].ToString(),
+                            emp_name = dtemp.Rows[i]["emp_name"].ToString(),
+                            email = dtemp.Rows[i]["email"].ToString(),
+                            email_status = "",
+                            email_msg = ""
+                        };
                         email_list.Add(deflist);
                     }
                     data.email_list = email_list;
@@ -897,13 +928,15 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     List<emailList> email_list = new List<emailList>();
                     for (int i = 0; i < dtemp.Rows.Count; i++)
                     {
-                        emailList deflist = new emailList();
-                        deflist.id = dtemp.Rows[i]["id"].ToString();
-                        deflist.doc_id = dtemp.Rows[i]["doc_id"].ToString();
-                        deflist.emp_id = dtemp.Rows[i]["emp_id"].ToString();
-                        deflist.email = dtemp.Rows[i]["email"].ToString();
-                        deflist.email_status = "";
-                        deflist.email_msg = "";
+                        emailList deflist = new emailList
+                        {
+                            id = dtemp.Rows[i]["id"].ToString(),
+                            doc_id = dtemp.Rows[i]["doc_id"].ToString(),
+                            emp_id = dtemp.Rows[i]["emp_id"].ToString(),
+                            email = dtemp.Rows[i]["email"].ToString(),
+                            email_status = "",
+                            email_msg = ""
+                        };
                         email_list.Add(deflist);
                     }
                     data.email_list = email_list;

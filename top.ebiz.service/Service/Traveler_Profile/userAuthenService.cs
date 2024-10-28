@@ -78,7 +78,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 if (dtrole.Rows.Count == 0)
                 {
                     
-                    logModel mLog = new logModel();
+                    logService.logModel mLog = new logService.logModel();
                     mLog.module = "Login";
                     mLog.tevent = "login";
                     mLog.data_log = JsonSerializer.Serialize(value);
@@ -154,15 +154,15 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 int iret = -1;
                 if (bCheckUserInSystem == true)
                 {
-                    
-                    logModel mLog = new logModel();
+
+                    logService.logModel mLog = new logService.logModel();
                     mLog.module = "Login";
                     mLog.tevent = "login after check user in table";
                     mLog.data_log = JsonSerializer.Serialize(value);
                     mLog.user_token = token_login;
                     logService.insertLog(mLog);
 
-                    js = new JavaScriptSerializer();
+                    
                     loginModel mLogin = new loginModel();
                     mLogin.token_login = token_login;
                     mLogin.user_id = user_id;
@@ -332,7 +332,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 }
                 else
                 {
-                    logModel mLogerror = new logModel();
+                    logService.logModel mLogerror = new logService.logModel();
                     mLogerror.module = "Login";
                     mLogerror.tevent = "loginWeb";
                     mLogerror.data_log = "user list is null " + _msg_ad;// JsonSerializer.Serialize(value);
@@ -346,15 +346,15 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
 
 
-            
-            logModel mLog = new logModel();
+
+            logService.logModel mLog = new logService.logModel();
             mLog.module = "Login";
             mLog.tevent = "loginWeb";
             mLog.data_log = "user id ref:" + xuser_id;// JsonSerializer.Serialize(value);
             mLog.user_token = token_login;
             logService.insertLog(mLog);
 
-            js = new JavaScriptSerializer();
+           
             loginModel mLogin = new loginModel();
             mLogin.token_login = token_login;
             mLogin.user_id = xuser_id;
@@ -373,8 +373,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
         }
         public loginResultModel logout(logoutModel value)
         {
-            
-            logModel mLog = new logModel();
+
+            logService.logModel mLog = new logService.logModel();
             mLog.module = "LogOut";
             mLog.tevent = "logout";
             mLog.data_log = JsonSerializer.Serialize(value);
@@ -402,43 +402,43 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 String str2 = String.Format(("{0}\\" + UserName.Trim()), domain);
                 String pass = Password;
             
-                DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
-                DirectorySearcher search = new DirectorySearcher(Entry);
-                //SearchResultCollection results;
-                //search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*))";
-                search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*)(samaccountname=" + UserName + "))";
-                search.PropertiesToLoad.Add("samaccountname");
-                search.PropertiesToLoad.Add("mail");
-                search.PropertiesToLoad.Add("usergroup");
-                search.PropertiesToLoad.Add("displayname");//first name
+                //DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
+                //DirectorySearcher search = new DirectorySearcher(Entry);
+                ////SearchResultCollection results;
+                ////search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*))";
+                //search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*)(samaccountname=" + UserName + "))";
+                //search.PropertiesToLoad.Add("samaccountname");
+                //search.PropertiesToLoad.Add("mail");
+                //search.PropertiesToLoad.Add("usergroup");
+                //search.PropertiesToLoad.Add("displayname");//first name
 
-                                                           //search.PropertiesToLoad.Add("memberOf"); 
-                SearchResult result;
-                SearchResultCollection resultCol = search.FindAll();
+                //                                           //search.PropertiesToLoad.Add("memberOf"); 
+                //SearchResult result;
+                //SearchResultCollection resultCol = search.FindAll();
 
                 //SearchResult xxx = search.FindOne();
-                if (resultCol != null)
-                {
-                    for (int counter = 0; counter < resultCol.Count; counter++)
-                    {
-                        string UserNameEmailString = string.Empty;
-                        result = resultCol[counter];
-                        if (result.Properties.Contains("samaccountname") &&
-                                 result.Properties.Contains("mail") &&
-                            result.Properties.Contains("displayname"))
-                        {
+                //if (resultCol != null)
+                //{
+                //    for (int counter = 0; counter < resultCol.Count; counter++)
+                //    {
+                //        string UserNameEmailString = string.Empty;
+                //        result = resultCol[counter];
+                //        if (result.Properties.Contains("samaccountname") &&
+                //                 result.Properties.Contains("mail") &&
+                //            result.Properties.Contains("displayname"))
+                //        {
 
-                            Users objSurveyUsers = new Users();
-                            objSurveyUsers.Email = (String)result.Properties["mail"][0];
-                            objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
-                            objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
-                            //objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
-                            lstADUsers.Add(objSurveyUsers);
+                //            Users objSurveyUsers = new Users();
+                //            objSurveyUsers.Email = (String)result.Properties["mail"][0];
+                //            objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
+                //            objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
+                //            //objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
+                //            lstADUsers.Add(objSurveyUsers);
 
-                        }
+                //        }
 
-                    }
-                }
+                //    }
+                //}
 
 
                 return lstADUsers;
@@ -465,42 +465,42 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 String str = String.Format("LDAP://{0}", domain);
                 String str2 = String.Format(("{0}\\" + UserName.Trim()), domain);
                 String pass = Password;
-                DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
-                DirectorySearcher search = new DirectorySearcher(Entry);
-                //SearchResultCollection results;
-                //search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*))";
-                search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*)(samaccountname=" + UserName_Def + "))";
-                search.PropertiesToLoad.Add("samaccountname");
-                search.PropertiesToLoad.Add("mail");
-                search.PropertiesToLoad.Add("usergroup");
-                search.PropertiesToLoad.Add("displayname");//first name
-                                                           //search.PropertiesToLoad.Add("memberOf");
-                SearchResult result;
-                SearchResultCollection resultCol = search.FindAll();
+                //DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
+                //DirectorySearcher search = new DirectorySearcher(Entry);
+                ////SearchResultCollection results;
+                ////search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*))";
+                //search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=*)(samaccountname=" + UserName_Def + "))";
+                //search.PropertiesToLoad.Add("samaccountname");
+                //search.PropertiesToLoad.Add("mail");
+                //search.PropertiesToLoad.Add("usergroup");
+                //search.PropertiesToLoad.Add("displayname");//first name
+                //                                           //search.PropertiesToLoad.Add("memberOf");
+                //SearchResult result;
+                //SearchResultCollection resultCol = search.FindAll();
 
-                //SearchResult xxx = search.FindOne();
-                if (resultCol != null)
-                {
-                    for (int counter = 0; counter < resultCol.Count; counter++)
-                    {
-                        string UserNameEmailString = string.Empty;
-                        result = resultCol[counter];
-                        if (result.Properties.Contains("samaccountname") &&
-                                 result.Properties.Contains("mail") &&
-                            result.Properties.Contains("displayname"))
-                        {
+                ////SearchResult xxx = search.FindOne();
+                //if (resultCol != null)
+                //{
+                //    for (int counter = 0; counter < resultCol.Count; counter++)
+                //    {
+                //        string UserNameEmailString = string.Empty;
+                //        result = resultCol[counter];
+                //        if (result.Properties.Contains("samaccountname") &&
+                //                 result.Properties.Contains("mail") &&
+                //            result.Properties.Contains("displayname"))
+                //        {
 
-                            Users objSurveyUsers = new Users();
-                            objSurveyUsers.Email = (String)result.Properties["mail"][0];
-                            objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
-                            objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
-                            //objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
-                            lstADUsers.Add(objSurveyUsers);
+                //            Users objSurveyUsers = new Users();
+                //            objSurveyUsers.Email = (String)result.Properties["mail"][0];
+                //            objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
+                //            objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
+                //            //objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
+                //            lstADUsers.Add(objSurveyUsers);
 
-                        }
+                //        }
 
-                    }
-                }
+                //    }
+                //}
 
                 _msg_ad = "";
                 return lstADUsers;

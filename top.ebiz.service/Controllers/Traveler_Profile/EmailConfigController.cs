@@ -9,8 +9,8 @@ using top.ebiz.service.Service.Traveler_Profile;
 
 namespace ebiz.webservice.service.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class EmailConfigController : ControllerBase
     {
         private readonly logService _logService;
@@ -22,21 +22,22 @@ namespace ebiz.webservice.service.Controllers
             _sendemailService = sendemailService;
         }
         // GET: api/EmailConfig
-        [HttpGet]
+       
         public IEnumerable<string> Get()
         {
             return new string[] { "value1", "value2" };
         }
 
         // GET: api/EmailConfig/5
-        [HttpGet("{id}")]
+        
         public string Get(int id)
         {
             return "value";
         }
 
         // POST: api/EmailConfig
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("EmailConfig", Name = "EmailConfig")]
         public IActionResult Post([FromBody] EmailModel value)
         {
             if (value == null) return null;
@@ -78,13 +79,13 @@ namespace ebiz.webservice.service.Controllers
         }
 
         // PUT: api/EmailConfig/5
-        [HttpPut("{id}")]
+        
         public void Put(int id, [FromBody] string value)
         {
         }
 
         // DELETE: api/EmailConfig/5
-        [HttpDelete("{id}")]
+        
         public void Delete(int id)
         {
            

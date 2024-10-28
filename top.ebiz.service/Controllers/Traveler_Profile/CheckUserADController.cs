@@ -12,19 +12,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class CheckUserADController : ControllerBase
     {
         // GET: api/Controller name
-        [HttpGet]
+       
 public IEnumerable<string> Get()
 {
     return new string[] { "value1", "value2" };
 }
 
 // GET: api/Controller name/5
-[HttpGet("{id}")]
+
 public string Get(int id)
 {
     return "value";
@@ -41,7 +41,8 @@ public string Get(int id)
         {
         }
         // POST: api/Controller name
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("CheckUserAD", Name = "CheckUserAD")]
 public IActionResult Post([FromBody] ADUserModel value)
         {
             if (value == null) return null;

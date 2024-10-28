@@ -14,19 +14,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class LoadImportKHCodeController : ControllerBase
     {
         // GET: api/Controller name
-        [HttpGet]
+       
 public IEnumerable<string> Get()
 {
     return new string[] { "value1", "value2" };
 }
 
 // GET: api/Controller name/5
-[HttpGet("{id}")]
+
 public string Get(int id)
 {
     return "value";
@@ -34,7 +34,8 @@ public string Get(int id)
 
 
                // POST: api/Controller name
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("LoadImportKHCode", Name = "LoadImportKHCode")]
 public IActionResult Post([FromBody]KHCodeModel value)
         {
             if (value == null) return null;
@@ -56,13 +57,13 @@ public IActionResult Post([FromBody]KHCodeModel value)
 }
 
 // PUT: api/Controller name/5
-[HttpPut("{id}")]
+
 public void Put(int id, [FromBody] string value)
 {
 }
 
 // DELETE: api/Controller name/5
-[HttpDelete("{id}")]
+
 public void Delete(int id)
 {
 }

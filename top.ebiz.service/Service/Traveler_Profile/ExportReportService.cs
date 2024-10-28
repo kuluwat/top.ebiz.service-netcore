@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http; // for HttpContext
 using System.IO;
 using top.ebiz.service.Models.Traveler_Profile;
 using OfficeOpenXml;
+
 namespace top.ebiz.service.Service.Traveler_Profile 
 {
     public class ExportFileModel
@@ -192,13 +193,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             var data = value;
             DataTable dtdef = new DataTable();
-            HttpResponse response = HttpContext.Current.Response;
+            //HttpResponse response = HttpContext.Current.Response;
 
 
             var datetime_run = DateTime.Now.ToString("yyyyMMddHHmm");
             string _Folder = "/ExportFile/" + value.doc_id + "/" + value.pagename + "/" + value.emp_id + "/";
-            string _PathSave = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
-            string _PathFileSave = _PathSave;
+            //string _PathSave = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
+            //string _PathFileSave = _PathSave;
             string _FileName = "";
 
             string ret = "";
@@ -213,9 +214,9 @@ namespace top.ebiz.service.Service.Traveler_Profile
             {
                 try
                 {
-                    bool folderExists = Directory.Exists(_PathSave);
-                    if (!folderExists)
-                        Directory.CreateDirectory(_PathSave);
+                    //bool folderExists = Directory.Exists(_PathSave);
+                    //if (!folderExists)
+                        //Directory.CreateDirectory(_PathSave);
 
                 }
                 catch { }
@@ -224,8 +225,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 if (value.pagename.ToString() == "allowance")
                 {
                     _FileName = "Allowance Payment Form " + value.doc_id + "_" + datetime_run + ".xlsx";
-                    _PathFileSave += _FileName;
-                    export_excel_allowance(value, _PathFileSave, ref msg_error);
+                    //_PathFileSave += _FileName;
+                    //export_excel_allowance(value, _PathFileSave, ref msg_error);
                 }
                 #endregion Export Excel 
             }
@@ -244,7 +245,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             data.after_trip.opt2.remark = (ret ?? "") == "true" ? "" : msg_error;
             data.after_trip.opt3 = new subAfterTripModel();
             data.after_trip.opt3.status = "";
-            data.after_trip.opt3.remark = _PathFileSave;
+            //data.after_trip.opt3.remark = _PathFileSave;
 
             return data;
         }

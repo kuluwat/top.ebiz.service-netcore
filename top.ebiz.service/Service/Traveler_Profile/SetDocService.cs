@@ -13,6 +13,7 @@ using top.ebiz.service.Models.Traveler_Profile;
 using System.Text.Json;
 using top.ebiz.service.Models.Traveler_Profile;
 using top.ebiz.service.Service.Traveler_Profile;
+using OfficeOpenXml;
 //using System.IO;
 //using System.DirectoryServices;
 //using System.Data.OleDb;
@@ -38,8 +39,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
             try
             {
                 //adapter_data
-                ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
-                dtSelect = conn_ws.adapter_data_ptai(sqlstr);
+                //ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
+                //dtSelect = conn_ws.adapter_data_ptai(sqlstr);
                 return "";
             }
             catch (Exception ex)
@@ -53,8 +54,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
             try
             {
                 //adapter_data
-                ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
-                dtSelect = conn_ws.adapter_data(sqlstr);
+                //ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
+                //dtSelect = conn_ws.adapter_data(sqlstr);
                 return "";
             }
             catch (Exception ex)
@@ -66,12 +67,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             try
             {
-                ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
+                string ret = "";
+                //ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
                 //ebiz.webservice.Table.wsConnection conn_ws = new Table.wsConnection();
-                string ret = conn_ws.execute_data(sqlstr, type_check);
+                //string ret = conn_ws.execute_data(sqlstr, type_check);
                 if (ret == "") { ret = "true"; }
                 if (ret.ToLower() == "true") { ret = "true"; }
                 return ret;
+
             }
             catch (Exception ex)
             {
@@ -386,39 +389,39 @@ namespace top.ebiz.service.Service.Traveler_Profile
                                 String str = String.Format("LDAP://{0}", domain);
                                 String str2 = String.Format(("{0}\\" + UserName.Trim()), domain);
                                 String pass = Password;
-                                DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
-                                DirectorySearcher search = new DirectorySearcher(Entry);
-                                search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))";
-                                search.PropertiesToLoad.Add("samaccountname");
-                                search.PropertiesToLoad.Add("mail");
-                                search.PropertiesToLoad.Add("usergroup");
-                                search.PropertiesToLoad.Add("displayname");//first name
-                                search.PropertiesToLoad.Add("memberOf");
-                                SearchResult result;
-                                SearchResultCollection resultCol = search.FindAll();
+                                //DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
+                                //DirectorySearcher search = new DirectorySearcher(Entry);
+                                //search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))";
+                                //search.PropertiesToLoad.Add("samaccountname");
+                                //search.PropertiesToLoad.Add("mail");
+                                //search.PropertiesToLoad.Add("usergroup");
+                                //search.PropertiesToLoad.Add("displayname");//first name
+                                //search.PropertiesToLoad.Add("memberOf");
+                                //SearchResult result;
+                                //SearchResultCollection resultCol = search.FindAll();
 
                                 //SearchResult xxx = search.FindOne();
-                                if (resultCol != null)
-                                {
-                                    for (int counter = 0; counter < resultCol.Count; counter++)
-                                    {
-                                        string UserNameEmailString = string.Empty;
-                                        result = resultCol[counter];
-                                        if (result.Properties.Contains("samaccountname") &&
-                                                 result.Properties.Contains("mail") &&
-                                            result.Properties.Contains("displayname"))
-                                        {
+                                //if (resultCol != null)
+                                //{
+                                //    for (int counter = 0; counter < resultCol.Count; counter++)
+                                //    {
+                                //        string UserNameEmailString = string.Empty;
+                                //        result = resultCol[counter];
+                                //        if (result.Properties.Contains("samaccountname") &&
+                                //                 result.Properties.Contains("mail") &&
+                                //            result.Properties.Contains("displayname"))
+                                //        {
 
-                                            Users objSurveyUsers = new Users();
-                                            objSurveyUsers.Email = (String)result.Properties["mail"][0];
-                                            objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
-                                            objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
-                                            objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
-                                            lstADUsers.Add(objSurveyUsers);
-                                        }
+                                //            Users objSurveyUsers = new Users();
+                                //            objSurveyUsers.Email = (String)result.Properties["mail"][0];
+                                //            objSurveyUsers.UserName = (String)result.Properties["samaccountname"][0];
+                                //            objSurveyUsers.DisplayName = (String)result.Properties["displayname"][0];
+                                //            objSurveyUsers.MemberOf = (String)result.Properties["memberOf"][0];
+                                //            lstADUsers.Add(objSurveyUsers);
+                                //        }
 
-                                    }
-                                }
+                                //    }
+                                //}
 
 
                             }
@@ -715,11 +718,11 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             var data = new UploadFileModel();
             DataTable dtdef = new DataTable();
-            HttpResponse response = HttpContext.Current.Response;
-            HttpFileCollection files = HttpContext.Current.Request.Files;
+            //HttpResponse response = HttpContext.Current.Response;
+            //HttpFileCollection files = HttpContext.Current.Request.Files;
 
             string _Folder = "/Image/" + value.file_doc + "/" + value.file_page + "/" + value.file_emp + "/";
-            string _Path = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
+            //string _Path = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
             string _FullPathName = "";//System.Web.HttpContext.Current.Server.MapPath("~/AttachedFile/Plan/" + file.FileName);
             string _FileName = "";
             string ret = "";
@@ -728,35 +731,35 @@ namespace top.ebiz.service.Service.Traveler_Profile
             string msg_error = "";
             try
             {
-                if (files == null)
-                {
-                    msg_error = "Select a file to upload.";
-                    goto next_line_1;
-                }
-                if (files.Count == 0)
-                {
-                    msg_error = "Select a file to upload.";
-                    goto next_line_1;
-                }
-                DirectoryInfo di = Directory.CreateDirectory(_Path);
-                //ลบจริงตอน save
-                if (Directory.Exists(_Path))
-                {
-                    //delete all files and folders in a directory 
-                    //foreach (FileInfo file in di.GetFiles())
-                    //{
-                    //    file.Delete();
-                    //} 
-                }
+                //if (files == null)
+                //{
+                //    msg_error = "Select a file to upload.";
+                //    goto next_line_1;
+                //}
+                //if (files.Count == 0)
+                //{
+                //    msg_error = "Select a file to upload.";
+                //    goto next_line_1;
+                //}
+                //DirectoryInfo di = Directory.CreateDirectory(_Path);
+                ////ลบจริงตอน save
+                //if (Directory.Exists(_Path))
+                //{
+                //    //delete all files and folders in a directory 
+                //    //foreach (FileInfo file in di.GetFiles())
+                //    //{
+                //    //    file.Delete();
+                //    //} 
+                //}
 
-                for (int i = 0; i < files.Count; i++)
-                {
-                    HttpPostedFile file = files[i];
-                    _FileName = file.FileName;
-                    _FullPathName = _Path + _FileName;//System.Web.HttpContext.Current.Server.MapPath("~/AttachedFile/Plan/" + file.FileName);
-                    file.SaveAs(_FullPathName);
-                    ret = "true";
-                }
+                //for (int i = 0; i < files.Count; i++)
+                //{
+                //    HttpPostedFile file = files[i];
+                //    _FileName = file.FileName;
+                //    _FullPathName = _Path + _FileName;//System.Web.HttpContext.Current.Server.MapPath("~/AttachedFile/Plan/" + file.FileName);
+                //    file.SaveAs(_FullPathName);
+                //    ret = "true";
+                //}
 
             }
             catch (Exception ex) { msg_error = ex.Message.ToString(); }
@@ -801,8 +804,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             var data = new UploadFileModel();
             DataTable dtdef = new DataTable();
-            HttpResponse response = HttpContext.Current.Response;
-            HttpFileCollection files = HttpContext.Current.Request.Files;
+            //HttpResponse response = HttpContext.Current.Response;
+            //HttpFileCollection files = HttpContext.Current.Request.Files;
 
             string msg_error = "";
             string msg_rows = "";
@@ -816,7 +819,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             try
             {
-                var httpRequest = HttpContext.Current.Request;
+                //var httpRequest = HttpContext.Current.Request;
                 var file_doc = "";
                 var file_page = "";
                 var file_emp = "";
@@ -828,28 +831,28 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 try
                 {
                     msg_rows = "error data : file_typename ";
-                    file_typename = httpRequest.Form["file_typename"].ToString();
+                    //file_typename = httpRequest.Form["file_typename"].ToString();
                 }
                 catch { }
                 try
                 {
                     msg_rows = "error data : file_token_login ";
-                    file_token_login = httpRequest.Form["file_token_login"].ToString();
+                    //file_token_login = httpRequest.Form["file_token_login"].ToString();
                 }
                 catch { }
 
                 msg_rows = "error data : file_doc ";
-                file_doc = httpRequest.Form["file_doc"].ToString();
+                //file_doc = httpRequest.Form["file_doc"].ToString();
                 msg_rows = "error data : file_page ";
                 try
                 {
-                    file_page = httpRequest.Form["file_page"].ToString().Trim();
+                    //file_page = httpRequest.Form["file_page"].ToString().Trim();
 
                     if (file_page == "kh code") { file_page = "khcode"; }
                 }
                 catch { }
                 msg_rows = "error data : file_emp ";
-                file_emp = httpRequest.Form["file_emp"].ToString();
+                //file_emp = httpRequest.Form["file_emp"].ToString();
                 msg_rows = "";
 
                 string _foler_name = "Image";
@@ -887,43 +890,43 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     _Folder = "/" + _foler_name + "/" + file_page + "/";
                 }
 
-                string _Path = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
+                //string _Path = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
 
                 #region Determine whether the directory exists.
                 try
                 {
-                    if (files == null)
-                    {
-                        msg_error = "Select a file to upload.";
-                        goto next_line_1;
-                    }
-                    if (files.Count == 0)
-                    {
-                        msg_error = "Select a file to upload.";
-                        goto next_line_1;
-                    }
-                    DirectoryInfo di = Directory.CreateDirectory(_Path);
-                    //ลบจริงตอน save
-                    if (Directory.Exists(_Path))
-                    {
-                        //delete all files and folders in a directory 
-                        //foreach (FileInfo file in di.GetFiles())
-                        //{
-                        //    file.Delete();
-                        //} 
-                    }
+                    //if (files == null)
+                    //{
+                    //    msg_error = "Select a file to upload.";
+                    //    goto next_line_1;
+                    //}
+                    //if (files.Count == 0)
+                    //{
+                    //    msg_error = "Select a file to upload.";
+                    //    goto next_line_1;
+                    //}
+                    //DirectoryInfo di = Directory.CreateDirectory(_Path);
+                    ////ลบจริงตอน save
+                    //if (Directory.Exists(_Path))
+                    //{
+                    //    //delete all files and folders in a directory 
+                    //    //foreach (FileInfo file in di.GetFiles())
+                    //    //{
+                    //    //    file.Delete();
+                    //    //} 
+                    //}
 
-                    for (int i = 0; i < files.Count; i++)
-                    {
-                        HttpPostedFile file = files[i];
-                        _FileName = file.FileName;
+                    //for (int i = 0; i < files.Count; i++)
+                    //{
+                    //    HttpPostedFile file = files[i];
+                    //    _FileName = file.FileName;
 
-                        _FileName = _FileName.Replace(" ", "_").Replace("(", "").Replace(")", "");
+                    //    _FileName = _FileName.Replace(" ", "_").Replace("(", "").Replace(")", "");
 
-                        _FullPathName = _Path + _FileName;//System.Web.HttpContext.Current.Server.MapPath("~/AttachedFile/Plan/" + file.FileName);
-                        file.SaveAs(_FullPathName);
-                        ret = "true";
-                    }
+                    //    _FullPathName = _Path + _FileName;//System.Web.HttpContext.Current.Server.MapPath("~/AttachedFile/Plan/" + file.FileName);
+                    //    file.SaveAs(_FullPathName);
+                    //    ret = "true";
+                    //}
 
                 }
                 catch (Exception ex) { msg_error = ex.Message.ToString(); }
@@ -1445,8 +1448,9 @@ namespace top.ebiz.service.Service.Traveler_Profile
                             }
                         }
 
-                        WS_ZTHRTEB020.SAP_ZTHRTEB020 ws_sap = new WS_ZTHRTEB020.SAP_ZTHRTEB020();
-                        ret = ws_sap.ZTHROMB005_ref(emp_id, sdate, edate);
+                        //WS_ZTHRTEB020.SAP_ZTHRTEB020 ws_sap = new WS_ZTHRTEB020.SAP_ZTHRTEB020();
+                        //ret = ws_sap.ZTHROMB005_ref(emp_id, sdate, edate);
+
                         if (ret.ToLower() != "true")
                         {
                             msg_error = " SAP Error :" + ret;
@@ -4389,8 +4393,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
                                     location = dremplist[0].def_location_id.ToString();
                                     try
                                     {
-                                        WS_ZTHRTEB020.SAP_ZTHRTEB020 ws_sap = new WS_ZTHRTEB020.SAP_ZTHRTEB020();
-                                        ret = ws_sap.ZTHRTEB020_DOC(doc_id, emp_id, sdate, edate, location, token_login);
+                                        //WS_ZTHRTEB020.SAP_ZTHRTEB020 ws_sap = new WS_ZTHRTEB020.SAP_ZTHRTEB020();
+                                        //ret = ws_sap.ZTHRTEB020_DOC(doc_id, emp_id, sdate, edate, location, token_login);
                                         if (ret.ToLower() != "true")
                                         {
                                             msg_error = " SAP Error :" + ret;
@@ -4478,8 +4482,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
                                         try
                                         {
-                                            WS_ZTHRTEB020.SAP_ZTHRTEB020 ws_sap = new WS_ZTHRTEB020.SAP_ZTHRTEB020();
-                                            ret = ws_sap.ZTHRTEB020_DOC(doc_id, "", sdate, edate, location, token_login);
+                                            //WS_ZTHRTEB020.SAP_ZTHRTEB020 ws_sap = new WS_ZTHRTEB020.SAP_ZTHRTEB020();
+                                            //ret = ws_sap.ZTHRTEB020_DOC(doc_id, "", sdate, edate, location, token_login);
                                             if (ret.ToLower() != "true")
                                             {
                                                 msg_error = " SAP Error :" + ret;
@@ -5247,7 +5251,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     string file_emp = "";
                     string _Server_path = System.Configuration.ConfigurationManager.AppSettings["ServerPath_Service"].ToString();
                     string _Folder = "/DocumentFile/" + file_page + "/";
-                    string _Path = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
+                    string _Path = "";
+                        //System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
 
                     string data_isos = html_content;
                     string file_Log = _Path + content_name;

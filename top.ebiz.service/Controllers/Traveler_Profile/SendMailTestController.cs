@@ -13,8 +13,8 @@ using top.ebiz.service.Service.Traveler_Profile;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class SendMailTestController : ControllerBase
     {
         // GET: api/Controller name
@@ -31,7 +31,8 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
 
 
                // POST: api/Controller name
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("SendMailTest", Name = "SendMailTest")]
 public IActionResult Post([FromBody]VisaOutModel value)
         {
 
@@ -75,13 +76,13 @@ public IActionResult Post([FromBody]VisaOutModel value)
 }
 
 // PUT: api/Controller name/5
-[HttpPut("{id}")]
+
 public void Put(int id, [FromBody] string value)
 {
 }
 
 // DELETE: api/Controller name/5
-[HttpDelete("{id}")]
+
 public void Delete(int id)
 {
 }

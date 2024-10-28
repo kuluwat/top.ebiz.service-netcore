@@ -7,26 +7,27 @@ using System.Text.Json;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class ConnectionTestController : ControllerBase
     {
         // GET: api/ConnectionTest
-        [HttpGet]
+       
         public IEnumerable<string> Get()
         {
             return new string[] { "value1", "value2" };
         }
 
         // GET: api/ConnectionTest/5
-        [HttpGet("{id}")]
+        
         public string Get(int id)
         {
             return "value";
         }
 
         // POST: api/ConnectionTest
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("ConnectionTest", Name = "ConnectionTest")]
         public IActionResult Post([FromBody] string value)
         {
             if (string.IsNullOrEmpty(value))
@@ -76,13 +77,13 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
         }
 
         // PUT: api/ConnectionTest/5
-        [HttpPut("{id}")]
+        
         public void Put(int id, [FromBody] string value)
         {
         }
 
         // DELETE: api/ConnectionTest/5
-        [HttpDelete("{id}")]
+        
         public void Delete(int id)
         {
         }

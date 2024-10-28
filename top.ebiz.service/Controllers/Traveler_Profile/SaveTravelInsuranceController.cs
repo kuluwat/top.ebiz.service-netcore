@@ -12,19 +12,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class SaveTravelInsuranceController : ControllerBase
     {
         // GET: api/Controller name
-        [HttpGet]
+       
 public IEnumerable<string> Get()
 {
     return new string[] { "value1", "value2" };
 }
 
 // GET: api/Controller name/5
-[HttpGet("{id}")]
+
 public string Get(int id)
 {
     return "value";
@@ -32,7 +32,8 @@ public string Get(int id)
 
 
                // POST: api/Controller name
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("SaveTravelInsurance", Name = "SaveTravelInsurance")]
 public IActionResult Post([FromBody]TravelInsuranceOutModel value)
         {
             if (value == null) return null;
@@ -56,13 +57,13 @@ public IActionResult Post([FromBody]TravelInsuranceOutModel value)
 }
 
 // PUT: api/Controller name/5
-[HttpPut("{id}")]
+
 public void Put(int id, [FromBody] string value)
 {
 }
 
 // DELETE: api/Controller name/5
-[HttpDelete("{id}")]
+
 public void Delete(int id)
 {
 }

@@ -6154,7 +6154,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             string file_page = page_name;
             string _foler_name = "DocumentFile";
             string _Folder = "/" + _foler_name + "/" + file_page + "/";
-            string _Path = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
+            //string _Path = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
 
             string _Server_path_service = System.Configuration.ConfigurationManager.AppSettings["ServerPath_Service"].ToString();
             string url = _Server_path_service + @"/DocumentFile/khcode/";
@@ -7271,20 +7271,20 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         string xfile_Log = "";
                         try
                         {
-                            if (dtcontent.Rows[0]["content_path"].ToString() != "")
-                            {
-                                xfile_Log = System.Web.HttpContext.Current.Server.MapPath("..");
-                                string localPath = System.Web.HttpContext.Current.Server.MapPath(".." + dtcontent.Rows[0]["content_path"].ToString());
-                                string file_Log = localPath + dtcontent.Rows[0]["content_name"].ToString();
-                                using (StreamReader sr = File.OpenText(file_Log))
-                                {
-                                    string _data = null;
-                                    while ((_data = sr.ReadLine()) != null)
-                                    {
-                                        html_content += _data;
-                                    }
-                                }
-                            }
+                            //if (dtcontent.Rows[0]["content_path"].ToString() != "")
+                            //{
+                            //    xfile_Log = System.Web.HttpContext.Current.Server.MapPath("..");
+                            //    string localPath = System.Web.HttpContext.Current.Server.MapPath(".." + dtcontent.Rows[0]["content_path"].ToString());
+                            //    string file_Log = localPath + dtcontent.Rows[0]["content_name"].ToString();
+                            //    using (StreamReader sr = File.OpenText(file_Log))
+                            //    {
+                            //        string _data = null;
+                            //        while ((_data = sr.ReadLine()) != null)
+                            //        {
+                            //            html_content += _data;
+                            //        }
+                            //    }
+                            //}
                         }
                         catch (Exception ex_msg) { html_content = ex_msg.Message.ToString() + " localPath " + xfile_Log + " isos path " + dtcontent.Rows[0]["content_path"].ToString(); }
 
@@ -7523,20 +7523,20 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         string xfile_Log = "";
                         try
                         {
-                            if (dtcontent.Rows[0]["content_path"].ToString() != "")
-                            {
-                                xfile_Log = System.Web.HttpContext.Current.Server.MapPath("..");
-                                string localPath = System.Web.HttpContext.Current.Server.MapPath(".." + dtcontent.Rows[0]["content_path"].ToString());
-                                string file_Log = localPath + dtcontent.Rows[0]["content_name"].ToString();
-                                using (StreamReader sr = File.OpenText(file_Log))
-                                {
-                                    string _data = null;
-                                    while ((_data = sr.ReadLine()) != null)
-                                    {
-                                        html_content += _data;
-                                    }
-                                }
-                            }
+                            //if (dtcontent.Rows[0]["content_path"].ToString() != "")
+                            //{
+                            //    xfile_Log = System.Web.HttpContext.Current.Server.MapPath("..");
+                            //    string localPath = System.Web.HttpContext.Current.Server.MapPath(".." + dtcontent.Rows[0]["content_path"].ToString());
+                            //    string file_Log = localPath + dtcontent.Rows[0]["content_name"].ToString();
+                            //    using (StreamReader sr = File.OpenText(file_Log))
+                            //    {
+                            //        string _data = null;
+                            //        while ((_data = sr.ReadLine()) != null)
+                            //        {
+                            //            html_content += _data;
+                            //        }
+                            //    }
+                            //}
                         }
                         catch (Exception ex_msg) { html_content = ex_msg.Message.ToString() + " localPath " + xfile_Log + " isos path " + dtcontent.Rows[0]["content_path"].ToString(); }
 

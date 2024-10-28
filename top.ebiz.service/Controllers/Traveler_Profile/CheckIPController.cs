@@ -11,19 +11,19 @@ using top.ebiz.service.Service.Traveler_Profile;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class CheckIPController : ControllerBase
     {
         // GET: api/Controller name
-        [HttpGet]
+       
 public IEnumerable<string> Get()
 {
     return new string[] { "value1", "value2" };
 }
 
 // GET: api/Controller name/5
-[HttpGet("{id}")]
+
 public string Get(int id)
 {
     return "value";
@@ -32,7 +32,8 @@ public string Get(int id)
 
        
         // POST: api/Controller name  
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("CheckIP", Name = "CheckIP")]
 public IActionResult Post([FromBody]ImgList value)
         {
             
@@ -52,19 +53,21 @@ public IActionResult Post([FromBody]ImgList value)
         }
         protected string GetIPAddress()
         {
-            System.Web.HttpContext context = System.Web.HttpContext.Current;
-            string ipAddress = context.Request.ServerVariables["HTTP_X_FORWARDED_FOR"];
+            //System.Web.HttpContext context = System.Web.HttpContext.Current;
+            //string ipAddress = context.Request.ServerVariables["HTTP_X_FORWARDED_FOR"];
 
-            if (!string.IsNullOrEmpty(ipAddress))
-            {
-                string[] addresses = ipAddress.Split(',');
-                if (addresses.Length != 0)
-                {
-                    return addresses[0];
-                }
-            }
+            //if (!string.IsNullOrEmpty(ipAddress))
+            //{
+            //    string[] addresses = ipAddress.Split(',');
+            //    if (addresses.Length != 0)
+            //    {
+            //        return addresses[0];
+            //    }
+            //}
 
-            return context.Request.ServerVariables["REMOTE_ADDR"];
+            //return context.Request.ServerVariables["REMOTE_ADDR"];
+
+            return "";
         }
 
     }

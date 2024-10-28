@@ -13,8 +13,8 @@ using top.ebiz.service.Service.Traveler_Profile;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class loginWebController : ControllerBase
     {
         // GET: api/loginWeb
@@ -30,7 +30,8 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
         }
 
         // POST: api/loginWeb
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("loginWeb", Name = "loginWeb")]
         public IActionResult Post([FromBody] loginClientModel value)
         {
             if (value == null) return null;

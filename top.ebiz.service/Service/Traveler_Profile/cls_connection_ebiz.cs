@@ -20,10 +20,10 @@ namespace top.ebiz.service.Service.Traveler_Profile
         OracleCommand comm;
         OracleTransaction trans;
 
-        OleDbConnection connOleDb;
-        OleDbDataAdapter daOleDb;
-        OleDbCommand commOleDb;
-        OleDbTransaction transOleDb;
+        //OleDbConnection connOleDb;
+        //OleDbDataAdapter daOleDb;
+        //OleDbCommand commOleDb;
+        //OleDbTransaction transOleDb;
 
         String OracleOn = System.Configuration.ConfigurationManager.AppSettings["OracleOn"].ToString();
         String ConnStr = System.Configuration.ConfigurationManager.AppSettings["ConnString"].ToString();
@@ -33,14 +33,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             if (OracleOn == "OleDb")
             {
-                if (connOleDb == null)
+                if (conn == null)
                 {
-                    connOleDb = new OleDbConnection(ConnStrOleDb);
+                    conn = new OracleConnection(ConnStrOleDb);
                 }
 
-                if (connOleDb.State != ConnectionState.Open)
+                if (conn.State != ConnectionState.Open)
                 {
-                    connOleDb.Open();
+                    conn.Open();
                 }
             }
             else
@@ -60,10 +60,10 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             if (OracleOn == "OleDb")
             {
-                if (connOleDb.State != ConnectionState.Closed)
+                if (conn.State != ConnectionState.Closed)
                 {
-                    connOleDb.Close();
-                    connOleDb.Dispose();
+                    conn.Close();
+                    conn.Dispose();
                 }
             }
             else
@@ -83,14 +83,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
             {
                 try
                 {
-                    commOleDb = new OleDbCommand(SqlStatement, connOleDb);
-                    if (transOleDb != null)
+                    comm = new OracleCommand(SqlStatement, conn);
+                    if (trans != null)
                     {
-                        commOleDb.Connection = connOleDb;
-                        commOleDb.Transaction = transOleDb;
+                        comm.Connection = conn;
+                        comm.Transaction = trans;
                     }
 
-                    commOleDb.ExecuteNonQuery();
+                    comm.ExecuteNonQuery();
 
                     ret = "True";
                 }
@@ -122,30 +122,50 @@ namespace top.ebiz.service.Service.Traveler_Profile
             return ret;
         }
 
-        public DataSet ExecuteAdapter(string SqlStatement)
+        //public DataSet ExecuteAdapter(string SqlStatement)
+        //{
+        //    if (OracleOn == "OleDb")
+        //    {
+        //        daOleDb = new OleDbDataAdapter(SqlStatement, connOleDb);
+        //        ds = new DataSet();
+        //        daOleDb.Fill(ds);
+        //    }
+        //    else
+        //    {
+        //        da = new OracleDataAdapter(SqlStatement, conn);
+        //        ds = new DataSet();
+        //        da.Fill(ds);
+        //    }
+        //    return ds;
+        //}
+
+        public DataSet ExecuteAdapter(string sqlStatement)
         {
-            if (OracleOn == "OleDb")
+            DataSet ds = new DataSet();
+
+            try
             {
-                daOleDb = new OleDbDataAdapter(SqlStatement, connOleDb);
-                ds = new DataSet();
-                daOleDb.Fill(ds);
+                using (var da = new OracleDataAdapter(sqlStatement, conn))
+                {
+                    da.Fill(ds);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                da = new OracleDataAdapter(SqlStatement, conn);
-                ds = new DataSet();
-                da.Fill(ds);
+                Console.WriteLine("Error executing query: " + ex.Message);
             }
+
             return ds;
         }
+
 
         public void BeginTransaction()
         {
             if (OracleOn == "OleDb")
             {
-                if (transOleDb == null)
+                if (trans == null)
                 {
-                    transOleDb = connOleDb.BeginTransaction();
+                    trans = conn.BeginTransaction();
                 }
             }
             else
@@ -161,9 +181,9 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             if (OracleOn == "OleDb")
             {
-                if (transOleDb != null)
+                if (trans != null)
                 {
-                    transOleDb.Commit();
+                    trans.Commit();
                 }
             }
             else
@@ -179,9 +199,9 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             if (OracleOn == "OleDb")
             {
-                if (transOleDb != null)
+                if (trans != null)
                 {
-                    transOleDb.Rollback();
+                    trans.Rollback();
                 }
             }
             else
@@ -573,7 +593,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         public string CurrentUserName()
         {
-            string CurrentUserName = HttpContext.Current.User.Identity.Name; // Gives actual user logged on (as seen in <ASP:Login />) 
+            string CurrentUserName = "";
+                //HttpContext.Current.User.Identity.Name; // Gives actual user logged on (as seen in <ASP:Login />) 
             try
             {
                 return CurrentUserName.Replace(@"THAIOILNT\", "");

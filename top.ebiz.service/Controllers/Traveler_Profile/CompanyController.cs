@@ -7,8 +7,8 @@ using top.ebiz.service.Service.Traveler_Profile;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class CompanyController : ControllerBase
     {
         private readonly logService _logService;
@@ -22,21 +22,22 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
         }
 
         // GET: api/Company
-        [HttpGet]
+       
         public IEnumerable<string> Get()
         {
             return new string[] { "value1", "value2" };
         }
 
         // GET: api/Company/5
-        [HttpGet("{id}")]
+        
         public string Get(int id)
         {
             return "value";
         }
 
         // POST: api/Company
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("Company", Name = "Company")]
         public IActionResult Post([FromBody] CompanyModel value)
         {
             if (value == null)
@@ -48,13 +49,13 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
         }
 
         // PUT: api/Company/5
-        [HttpPut("{id}")]
+        
         public void Put(int id, [FromBody] string value)
         {
         }
 
         // DELETE: api/Company/5
-        [HttpDelete("{id}")]
+        
         public void Delete(int id)
         {
         }

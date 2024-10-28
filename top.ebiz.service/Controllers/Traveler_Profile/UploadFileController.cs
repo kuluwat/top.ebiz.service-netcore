@@ -5,8 +5,8 @@ using top.ebiz.service.Service.Traveler_Profile;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class UploadFileController : ControllerBase
     {
         private readonly logService _logService;
@@ -19,21 +19,22 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
         }
 
         // GET: api/UploadFile
-        [HttpGet]
+       
         public IEnumerable<string> Get()
         {
             return new string[] { "value1", "value2" };
         }
 
         // GET: api/UploadFile/5
-        [HttpGet("{id}")]
+        
         public string Get(int id)
         {
             return "value";
         }
 
         // POST: api/UploadFile
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("UploadFile", Name = "UploadFile")]
         public IActionResult Post()
         {
             // Log the upload file event
@@ -53,13 +54,13 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
         }
 
         // PUT: api/UploadFile/5
-        [HttpPut("{id}")]
+        
         public void Put(int id, [FromBody] string value)
         {
         }
 
         // DELETE: api/UploadFile/5
-        [HttpDelete("{id}")]
+        
         public void Delete(int id)
         {
         }

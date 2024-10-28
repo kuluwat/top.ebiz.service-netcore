@@ -12,26 +12,27 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    [ApiController]
-    [Route("api/[controller]")]
+   // [ApiController]
+    //[Route("api/[controller]")]
     public class TravelerHistoryController : ControllerBase
     {
         // GET: api/Controller name
-        [HttpGet]
+       
 public IEnumerable<string> Get()
 {
     return new string[] { "value1", "value2" };
 }
 
 // GET: api/Controller name/5
-[HttpGet("{id}")]
+
 public string Get(int id)
 {
     return "value";
 } 
 
                // POST: api/Controller name
-        [HttpPost]
+       [IgnoreAntiforgeryToken]
+        [HttpPost("TravelerHistory", Name = "TravelerHistory")]
 public IActionResult Post([FromBody]TravelerHistoryModel value)
         {
             if (value == null) return null;
