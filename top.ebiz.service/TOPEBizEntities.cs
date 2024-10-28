@@ -1,5 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Oracle.ManagedDataAccess.Client; 
+using Microsoft.Extensions.Configuration;
+using Oracle.ManagedDataAccess.Client;
+using System.IO;
+using top.ebiz.service.Models.Create_Trip;
 
 namespace top.ebiz.service
 { 

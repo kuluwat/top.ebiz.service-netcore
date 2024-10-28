@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using top.ebiz.service.Service.Create_Trip;
 using top.ebiz.service.Models.Create_Trip;

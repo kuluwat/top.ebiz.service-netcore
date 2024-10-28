@@ -38,7 +38,6 @@ namespace top.ebiz.service.Controllers.Create_Trip
 
             // Serialize the result to JSON
             var json = JsonSerializer.Serialize(result);
-
             return Ok(json);
         }
 
