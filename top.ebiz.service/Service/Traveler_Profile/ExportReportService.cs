@@ -1,18 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+﻿
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
-
-using Microsoft.AspNetCore.Http; // for HttpContext
-using System.IO;
-using top.ebiz.service.Models.Traveler_Profile;
 using OfficeOpenXml;
+using top.ebiz.service.Models.Create_Trip;
+using top.ebiz.service.Models.Traveler_Profile;
 
 
-namespace top.ebiz.service.Service.Traveler_Profile 
+namespace top.ebiz.service.Service.Traveler_Profile
 {
-    public class ExportFileModel
+    public class ExportFileInModel
     {
         public string token_login { get; set; }
         public string doc_id { get; set; }
@@ -24,7 +20,22 @@ namespace top.ebiz.service.Service.Traveler_Profile
         public string actionname { get; set; }
         public string filetype { get; set; }//excel,pdf
 
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
+        [NotMapped] public afterTripModel after_trip { get; set; } = new afterTripModel();
+    }
+
+    public class ExportFileOutModel
+    {
+        public string token_login { get; set; }
+        public string doc_id { get; set; }
+        public string emp_id { get; set; }
+
+        public string path { get; set; }
+        public string filename { get; set; }
+        public string pagename { get; set; }
+        public string actionname { get; set; }
+        public string filetype { get; set; }//excel,pdf
+
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class ExportISOSModel
     {
@@ -38,14 +49,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
         public string actionname { get; set; }
         public string filetype { get; set; }//excel,pdf
 
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
+        [NotMapped] public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class ExportRecordModel
     {
         public string token_login { get; set; }
         public string year { get; set; }
 
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
+        [NotMapped] public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
 
     public class Report_AllowanceModel
@@ -88,7 +99,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         public List<dailyallowanceModel> dailyallowance { get; set; } = new List<dailyallowanceModel>();
         public List<flightscheduleModel> flightschedule { get; set; } = new List<flightscheduleModel>();
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
+
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
 
     }
     public class dailyallowanceModel
@@ -131,7 +143,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         public List<reportisosList> details_list { get; set; } = new List<reportisosList>();
 
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
+        [NotMapped]
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class ReportInsuranceRecordOutModel
     {
@@ -140,7 +153,9 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         public List<insuranceModel> details_list { get; set; } = new List<insuranceModel>();
 
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
+
+        [NotMapped]
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class reportisosList
     {
@@ -185,43 +200,34 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
     public class ExportReportService
     {
-        cls_connection_ebiz conn;
+        cls_connection conn;
         string sqlstr = "";
         string ret = "";
         DataTable dt;
 
-        public ExportFileModel exportfile_data(ExportFileModel value)
+        public ExportFileOutModel exportfile_data(ExportFileInModel value)
         {
-            var data = value;
+            //var data = value;
             DataTable dtdef = new DataTable();
             //HttpResponse response = HttpContext.Current.Response;
 
 
             var datetime_run = DateTime.Now.ToString("yyyyMMddHHmm");
             string _Folder = "/ExportFile/" + value.doc_id + "/" + value.pagename + "/" + value.emp_id + "/";
-            //string _PathSave = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
-            //string _PathFileSave = _PathSave;
-            string _FileName = "";
 
+            //string _PathSave = System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
+            string _PathFileSave = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "ExportFile", value.doc_id, value.pagename, value.emp_id);
+            string _FileName = "";
             string ret = "";
 
-            string _Server_path = "http://TBKC-DAPPS-05.thaioil.localnet/ebiz_ws";
-            _Server_path = System.Configuration.ConfigurationManager.AppSettings["ServerPath_Service"].ToString();
             //http://TBKC-DAPPS-05.thaioil.localnet/ebiz_ws/Image/D001/travelerhistory/TO102155//Image/D001/travelerhistory/TO102155/
+            //"http://TBKC-DAPPS-05.thaioil.localnet/ebiz_ws"
+            string _Server_path = configApp.GetStringFromAppSettings("ServerPath_Service") ?? ""; // System.Configuration.ConfigurationManager.AppSettings["ServerPath_Service"].ToString();
 
             #region Determine whether the directory exists. 
             string msg_error = "";
             try
             {
-                try
-                {
-                    //bool folderExists = Directory.Exists(_PathSave);
-                    //if (!folderExists)
-                        //Directory.CreateDirectory(_PathSave);
-
-                }
-                catch { }
-
                 #region Export Excel 
                 if (value.pagename.ToString() == "allowance")
                 {
@@ -233,24 +239,25 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             catch (Exception ex) { msg_error = "create folder " + ex.Message.ToString(); }
 
-        #endregion Determine whether the directory exists.
+            #endregion Determine whether the directory exists.
 
-        next_line_1:;
+            //next_line_1:;
 
+            var data = new ExportFileOutModel();
             data.path = _Server_path + _Folder;
             data.filename = _FileName;
 
-            //data.after_trip.opt1 = (ret ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret ?? "") == "true" ? "Upload file succesed." : "Export file failed.";
-            //data.after_trip.opt2.remark = (ret ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "";
-            //data.after_trip.opt3.remark = _PathFileSave;
+            data.after_trip.opt1 = (ret ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret ?? "") == "true" ? "Upload file succesed." : "Export file failed.";
+            data.after_trip.opt2.remark = (ret ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "";
+            data.after_trip.opt3.remark = _PathFileSave;
 
             return data;
         }
-        public string export_excel_allowance(ExportFileModel value, string name, ref string msg_error)
+        public string export_excel_allowance(ExportFileInModel value, string name, ref string msg_error)
         {
             string ret = "";
             string token_login = value.token_login;
@@ -671,7 +678,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
         }
 
-        public Report_AllowanceModel repoprt_data_allowance(ExportFileModel value)
+        public Report_AllowanceModel repoprt_data_allowance(ExportFileInModel value)
         {
             string msg_error = "";
             Report_AllowanceModel data = new Report_AllowanceModel();
@@ -690,14 +697,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     var doc_id = dtMain.Rows[i]["doc_id"].ToString();
                     var emp_id = dtMain.Rows[i]["employee_id"].ToString();
                     var emp_name = dtMain.Rows[i]["employee_name"].ToString();
-                     
+
                     //20211027 เพิ่มดึงข้อมูล passport ใหม่ 
                     string passport = dtMain.Rows[i]["passport"].ToString();
                     string passport_date = dtMain.Rows[i]["passport_date"].ToString();
                     try
                     {
                         SearchDocService _swd = new SearchDocService();
-                        var est = _swd.EstimateExpense(doc_id , emp_id);
+                        var est = _swd.EstimateExpense(doc_id, emp_id);
                         if (est.PassportExpense.ToString() != "")
                         {
                             passport = est.PassportExpense.ToString();
@@ -705,10 +712,10 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         if (est.PassportDate.ToString() != "")
                         {
                             passport_date = _swd.convert_date_display(est.PassportDate.ToString());
-                        } 
+                        }
                     }
                     catch { }
-                      
+
                     #region ข้อมูล allowance header  
                     data.doc_id = doc_id;
                     data.emp_id = emp_id;
@@ -735,8 +742,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     data.icon_travel_agent = dtMain.Rows[i]["icon_travel_agent"].ToString();
                     data.icon_other = dtMain.Rows[i]["icon_other"].ToString();
 
-                    data.passport = passport ;
-                    data.passport_date =passport_date;
+                    data.passport = passport;
+                    data.passport_date = passport_date;
                     data.luggage_clothing = dtMain.Rows[i]["luggage_clothing"].ToString();
                     data.luggage_clothing_date = dtMain.Rows[i]["luggage_clothing_date"].ToString();
 
@@ -847,17 +854,18 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 ret = "true";
             }
             catch (Exception ex) { msg_error = ex.Message.ToString(); data.token_login = msg_error; }
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
-        public DataSet refdata_excel_allowance(ExportFileModel value)
+        public DataSet refdata_excel_allowance(ExportFileInModel value)
         {
             string ret = "";
             string token_login = value.token_login;
@@ -891,7 +899,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                              from bz_doc_traveler_expense tb1
                              left join (select ex.dh_code, ex.dte_emp_id, ex.dte_cl_valid, ex.dte_passport_expense, ex.dte_passport_valid 
                              from bz_doc_traveler_expense ex
-                             where ex.dh_code ='"+ doc_id + "' and ex.dte_emp_id ='" + emp_id + "' " +
+                             where ex.dh_code ='" + doc_id + "' and ex.dte_emp_id ='" + emp_id + "' " +
                           @" and rownum =1) tb2 on tb1.dh_code = tb2.dh_code and tb1.dte_emp_id = tb2.dte_emp_id
                              where tb1.dh_code ='" + doc_id + "' and tb1.dte_emp_id ='" + emp_id + "'  " +
                           @" group by tb1.dh_code, tb1.dte_emp_id, tb2.dh_code, tb2.dte_emp_id, tb2.dte_cl_valid, tb2.dte_passport_expense, tb2.dte_passport_valid ";
@@ -921,10 +929,10 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     from bz_doc_allowance_detail group by doc_id,emp_id 
                     ) b on a.doc_id = b.doc_id and a.emp_id = b.emp_id 
                     left join bz_data_passport p on a.emp_id = p.emp_id and p.default_type ='true'
-                    left join ( "+ sbz_doc_traveler_expense  + " ) ex on b.emp_id = ex.emp_id and a.doc_id = ex.doc_id  where a.doc_id ='" + doc_id + "' and b.emp_id ='" + emp_id + "' ";
+                    left join ( " + sbz_doc_traveler_expense + " ) ex on b.emp_id = ex.emp_id and a.doc_id = ex.doc_id  where a.doc_id ='" + doc_id + "' and b.emp_id ='" + emp_id + "' ";
 
             //ข้อมูลที่ออกมาตั้งมีแค่ rows เดียวก่อน ยังไม่มี กรณีที่ admin export all
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 wssearch = new SearchDocService();
@@ -973,10 +981,10 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
                             dt.Rows[i]["passport"] = dPassport.ToString();
                             dt.Rows[i]["luggage_clothing"] = dLuggage_Clothing.ToString();
-                             
+
                             //dt.Rows[i]["passport_date"] =   passport_date.ToString();
                             // dt.Rows[i]["luggage_clothing_date"] = luggage_clothing_date.ToString();
-                             
+
                             remark = dt.Rows[i]["remark"].ToString();
                         }
 
@@ -1033,7 +1041,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                             where a.year = '" + year + "' ";
                 sqlstr += @" order by to_number(a.id) ";
                 dt = new DataTable();
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                 {
                     for (int i = 0; i < dt.Rows.Count; i++)
@@ -1058,13 +1066,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 ret = "true";
             }
             catch (Exception ex) { msg_error = ex.Message.ToString(); data.token_login = msg_error; }
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -1116,7 +1125,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 sqlstr += @" order by h.dh_code,ex.dte_emp_id ";
 
                 dt = new DataTable();
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                 {
                     for (int i = 0; i < dt.Rows.Count; i++)
@@ -1150,13 +1159,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 ret = "true";
             }
             catch (Exception ex) { msg_error = ex.Message.ToString(); data.token_login = msg_error; }
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }

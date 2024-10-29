@@ -18,8 +18,9 @@ namespace top.ebiz.service.Models.Create_Trip
 
         //DevFix 20210527 0000 เพิ่มข้อมูล ประเภทใบงานเป็น 1:flow, 2:not flow, 3:training เก็บไว้ที่  BZ_DOC_HEAD.DH_TYPE_FLOW
         public string type_flow { get; set; }
+
         //DevFix 20210527 0000 file
-        public List<DocFileListModel> docfile { get; set; } = new List<DocFileListModel>();
+        public List<DocFileListInModel> docfile { get; set; } = new List<DocFileListInModel>();
 
         //DevFix 20211004 0000 file 
         public string file_approval_output_form { get; set; }

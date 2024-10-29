@@ -45,8 +45,8 @@ namespace top.ebiz.service.Models.Create_Trip
     public class afterTripModel
     {
         public string opt1 { get; set; }
-        public subAfterTripModel opt2 { get; set; } = new subAfterTripModel();
-        public subAfterTripModel opt3 { get; set; } = new subAfterTripModel();
+        public subAfterTripModel opt2 { get; set; } = new Models.Create_Trip.subAfterTripModel();
+        public subAfterTripModel opt3 { get; set; } = new Models.Create_Trip.subAfterTripModel();
     }
     public class subAfterTripModel
     {

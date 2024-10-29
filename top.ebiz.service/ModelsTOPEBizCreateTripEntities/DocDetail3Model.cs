@@ -39,7 +39,7 @@ namespace top.ebiz.service.Models.Create_Trip
         public string type_flow { get; set; }
 
         //DevFix 20210527 0000 file
-        public List<DocFileListModel> docfile { get; set; } = new List<DocFileListModel>();
+        public List<DocFileListOutModel> docfile { get; set; } = new List<DocFileListOutModel>();
 
         public string msg_remark { get; set; }
 
@@ -154,7 +154,17 @@ namespace top.ebiz.service.Models.Create_Trip
     }
 
     //DevFix 20210527 0000 file
-    public class DocFileListModel
+    public class DocFileListInModel
+    {
+        // DH_CODE, DF_ID, DF_NAME, DF_PATH, DF_REMARK
+        public string DH_CODE { get; set; }
+        public string DF_ID { get; set; }
+        public string DF_NAME { get; set; }
+        public string DF_PATH { get; set; }
+        public string DF_REMARK { get; set; }
+         
+    }
+    public class DocFileListOutModel
     {
         // DH_CODE, DF_ID, DF_NAME, DF_PATH, DF_REMARK
         public string DH_CODE { get; set; }

@@ -38,10 +38,10 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
 
             try
             {
-                // Assuming cls_connection_ebiz is already set up to handle DB operations
-                cls_connection_ebiz conn = new cls_connection_ebiz();
+                // Assuming cls_connection is already set up to handle DB operations
+                cls_connection conn = new cls_connection();
                 conn.OpenConnection();
-                ret += "*********Ok cls_connection_ebiz.";
+                ret += "*********Ok cls_connection.";
 
                 DataTable dt = new DataTable();
                 string sqlstr = value;
@@ -61,7 +61,7 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
             }
             catch (Exception ex)
             {
-                ret += "*********error cls_connection_ebiz: " + ex.Message;
+                ret += "*********error cls_connection: " + ex.Message;
             }
 
             // Log the results using SearchDocService's logModel

@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+﻿ 
+using System.ComponentModel.DataAnnotations.Schema; 
+using top.ebiz.service.Models.Create_Trip;
 
 
 namespace top.ebiz.service.Models.Traveler_Profile
@@ -29,7 +28,8 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<roleList> admin_list { get; set; } = new List<roleList>();
 
 
-       //public afterTripModel after_trip { get; set; } = new afterTripModel();
+       [NotMapped] 
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
         public List<userNewList> after_add_user { get; set; } = new List<userNewList>();
         public string remark { get; set; }
     }

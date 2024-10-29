@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using top.ebiz.service.Models.Create_Trip;
 
 namespace top.ebiz.service.Models.Traveler_Profile
 {
@@ -92,14 +94,14 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<MMasterNomalModel> master_currency = new List<MMasterNomalModel>();
         public List<MasterAirportModel> master_airport = new List<MasterAirportModel>();
         public List<MMasterInsurancebrokerModel> master_insurancebroker = new List<MMasterInsurancebrokerModel>();
-
-
-
+         
         public List<MasterVISADocument_ListModel> visa_document = new List<MasterVISADocument_ListModel>();
         public List<MasterVISADocountries_ListModel> visa_docountries = new List<MasterVISADocountries_ListModel>();
 
         public List<ImgList> img_list { get; set; } = new List<ImgList>();
-       //public afterTripModel after_trip { get; set; } = new afterTripModel();
+
+        [NotMapped]
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class MasterNormalModel
     {
@@ -181,7 +183,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public string token_login { get; set; }
 
         public List<MMenuListModel> menuList = new List<MMenuListModel>();
-       //public afterTripModel after_trip { get; set; } = new afterTripModel();
+       [NotMapped] public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
 
     public class MMenuListModel

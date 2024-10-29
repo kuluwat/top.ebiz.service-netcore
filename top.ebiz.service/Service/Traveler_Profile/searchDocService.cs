@@ -23,7 +23,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         string sqlstr;
         SetDocService sw;
-        cls_connection_ebiz conn;
+        cls_connection conn;
         DataTable dt;
         #region  new arr
         public EmpListOutModel new_emp_list(string token_login, Boolean user_admin)
@@ -194,7 +194,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += " order by a.id ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -267,7 +267,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += " order by a.id ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -340,7 +340,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += " order by a.action_name, a.emp_id, a.id ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -378,7 +378,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr = @" select count(1) as xcount
                             from bz_doc_head a 
                             where dh_doc_status in (31,32,41,42,50) and dh_code ='" + doc_id + "' ";
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (dt.Rows.Count > 0)
@@ -442,7 +442,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 sqlstr = @" select count(1) as xcount
                             from bz_doc_head a 
                             where dh_doc_status in (31,32,41,42,50) and dh_code ='" + doc_id + "' ";
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                 {
                     if (dt.Rows.Count > 0)
@@ -524,7 +524,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 var token_login = modified_by;
@@ -701,7 +701,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where status =1  order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -716,7 +716,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where status =1  order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -731,7 +731,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where status =1  order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -747,7 +747,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where status =1  order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             { }
             return dt;
@@ -760,7 +760,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where status =1  order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             { }
             return dt;
@@ -774,7 +774,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where status =1  order by id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -872,7 +872,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -887,7 +887,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -902,7 +902,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -918,7 +918,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -934,7 +934,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         order by to_number(sort_by)";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -952,7 +952,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += @" order by sort_by";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -972,7 +972,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += @" order by sort_by ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -988,7 +988,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                          order by ctn_name";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -1008,7 +1008,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                          order by ctn_id,ct_name";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -1028,7 +1028,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                          order by pv_id,pv_name";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -1048,7 +1048,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                          order by b.function, b.sections, b.department ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -1077,7 +1077,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                      )t inner join  (select distinct user_id, token_code from bz_login_token) a on  t.emp_id = a.user_id
                      where t.doc_id = '" + doc_id + "' and a.token_code = '" + token_login + "' ";
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 try
@@ -1093,7 +1093,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             DataTable dtdetail = new DataTable();
             sqlstr = @" select key_value from BZ_CONFIG_DATA where status = 1 and lower(key_name) = lower('PASSPORT PDPA WORDING')";
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 try { return dt.Rows[0]["key_value"].ToString(); } catch { }
@@ -1140,7 +1140,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 sqlstr += " where upper(b.employeeid) in (" + emplist + ")";
             }
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -1161,7 +1161,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             dt = new DataTable();
              
             //ws_conn.wsConnection conn = new ws_conn.wsConnection(); 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             DataTable dtcopy = new DataTable(); 
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
@@ -1509,7 +1509,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 sqlstr += @"order by v.id";
             }
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -1534,7 +1534,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += @"  order by a.id ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (dt.Rows.Count == 0)
@@ -1555,7 +1555,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     sqlstr += @"  order by a.id ";
 
                     dt = new DataTable();
-                    conn = new cls_connection_ebiz();
+                    conn = new cls_connection();
                     if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                     {
                         if (dt.Rows.Count == 0)
@@ -1571,7 +1571,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                          where b.continent_id = '" + continent_id + "' and b.country_id = '" + country_id + "' order by c.id";
 
             dtdesc = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtdesc, sqlstr) == "")
             {
                 if (dtdesc.Rows.Count == 0)
@@ -1582,7 +1582,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                          where b.continent_id = '" + continent_id + "' and b.country_id is null order by c.id";
 
                     dtdesc = new DataTable();
-                    conn = new cls_connection_ebiz();
+                    conn = new cls_connection();
                     if (SetDocService.conn_ExecuteData(ref dtdesc, sqlstr) == "")
                     {
                     }
@@ -1620,7 +1620,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where lower(page_name) = lower('" + page_name + "') order by a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -1640,7 +1640,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
         private DataTable refdata_Transportation(string token_login, string doc_id, string emp_id)
         {
 
-            string ServerFolder = System.Configuration.ConfigurationManager.AppSettings["ServerFolder"].ToString();
+            string ServerFolder = configApp.GetStringFromAppSettings("ServerFolder") ?? "";  // System.Configuration.ConfigurationManager.AppSettings["ServerFolder"].ToString();
 
             var dt = new DataTable();
             if (ServerFolder.ToString() == @"D:\Ebiz")
@@ -1732,7 +1732,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         WHERE A.BUSINESS_DOC_NO = '" + doc_id + "' AND WF.STEP_FLOW != 4 ORDER BY A.ORDER_BY ";
             }
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 //dt = new DataTable();
@@ -1750,8 +1750,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         from  bz_config_data 
                         where lower(key_name) = lower('URL Document Personal Car') and status = 1 ";
 
-            dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            dt = new DataTable(); 
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (dt.Rows.Count > 0)
@@ -1800,7 +1799,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -1854,7 +1853,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -1904,7 +1903,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -1950,7 +1949,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -2143,7 +2142,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where a.passport_no is not null and h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id  ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -2237,7 +2236,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (doc_id != "personal")
@@ -2377,7 +2376,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (doc_id == "personal")
@@ -2397,7 +2396,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
                 //ดึงข้อมูล doc_status จาก doc_status
                 sqlstr = @"select distinct emp_id, nvl(doc_status,'1') as doc_status from BZ_DOC_VISA where doc_id ='" + doc_id + "'";
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 DataTable dtdoc_status = new DataTable();
                 SetDocService.conn_ExecuteData(ref dtdoc_status, sqlstr);
 
@@ -2489,7 +2488,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
 
             DataTable dtdefault_type = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtdefault_type, sqlstr) == "")
             {
 
@@ -2563,7 +2562,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 //ใช้ข้อมูลฝั่ง web เป็นหลัก 
@@ -2572,7 +2571,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 //{
                 //    sqlstr = "";
                 //    dt = new DataTable();
-                //    conn = new cls_connection_ebiz();
+                //    conn = new cls_connection();
                 //    if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                 //    {
                 //    }
@@ -2583,7 +2582,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 //if (dt.Rows.Count == 0)
                 //{
                 //    dt = new DataTable();
-                //    conn = new cls_connection_ebiz();
+                //    conn = new cls_connection();
                 //    if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                 //    {
                 //    }
@@ -2609,7 +2608,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 //Auwat 20210903 0000 แก้ไข concept ให้ passport เป็นข้อมูลชุดกันของแต่ traverler
                 sqlstr = @"select distinct emp_id, nvl(doc_status,'1') as doc_status from BZ_DOC_PASSPORT where doc_id ='" + doc_id + "'";
                 //sqlstr = @"select distinct emp_id, nvl(doc_status,'1') as doc_status from BZ_DATA_PASSPORT where doc_id ='" + doc_id + "'";
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 DataTable dtdoc_status = new DataTable();
                 SetDocService.conn_ExecuteData(ref dtdoc_status, sqlstr);
                 #endregion ดึงข้อมูล doc_status จาก doc_status
@@ -2719,7 +2718,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += @" order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 sqlstr = @" select distinct  ex.dte_emp_id as emp_id, ex.dh_code as doc_id
@@ -2729,7 +2728,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                              from bz_doc_traveler_expense ex 
                              where ex.dte_passport_expense is not null and ex.dh_code = '" + doc_id + "' order by ex.dte_passport_valid";
                 DataTable dtpassport_phase1 = new DataTable();
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (SetDocService.conn_ExecuteData(ref dtpassport_phase1, sqlstr) == "")
                 {
                 }
@@ -2819,7 +2818,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 string xfrom_date = "airticket_arrival_date";
                 sqlstr = @"select count(1) as xcount from  bz_doc_airticket_detail_keep t where t.doc_id = '" + doc_id + "' ";
                 dt = new DataTable();
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                 {
                     if (dt.Rows.Count > 0) { if (dt.Rows[0]["xcount"].ToString() == "1") { xfrom_date = "airticket_arrival_date"; } }
@@ -2849,7 +2848,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where t.doc_id = '" + doc_id + "'  order by t.emp_id ";
             }
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 dtt = dt; dtt.AcceptChanges();
@@ -2869,7 +2868,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where a.status = 1 
                         and lower(a.travel_category) like lower('" + doc_type + "')  ";
             dtrate = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtrate, sqlstr) == "")
             {
             }
@@ -2879,7 +2878,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where ap_id  in 
                         (select  distinct  airticket_route_from from bz_doc_airticket_detail_keep  where doc_id = '" + doc_id + "'  union select distinct airticket_route_to from bz_doc_airticket_detail_keep  where doc_id = '" + doc_id + "'    )";
             dtzone = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtzone, sqlstr) == "")
             {
             }
@@ -2941,7 +2940,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             //sqlstr += @" order by a.emp_id, to_number(def_date),a.id ";
 
             dtair = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtair, sqlstr) == "")
             {
                 if (dtair.Rows.Count > 0)
@@ -3012,7 +3011,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += @" order by ex.dte_emp_id,a.id";
 
             dtdef = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtdef, sqlstr) == "")
             {
 
@@ -3505,7 +3504,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     and h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -3549,7 +3548,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -3601,7 +3600,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -3647,7 +3646,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -3683,7 +3682,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                          from BZ_DOC_TRAVELEXPENSE_SAP 
                          where type_main = 'true' and doc_id = '" + doc_id + "'";
             dtSAP = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtSAP, sqlstr) == "")
             { }
 
@@ -3699,7 +3698,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where a.doc_id = '" + doc_id + "'" +
                         " group by a.doc_id, a.emp_id, nvl(a.luggage_clothing,0) ";
             DataTable dtallowan = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtallowan, sqlstr) == "")
             { }
 
@@ -3709,7 +3708,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         where a.doc_id = '" + doc_id + "' " +
                         " group by  a.doc_id, a.emp_id, nvl(a.certificates_total, 0) ";
             DataTable dtinsurance = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtinsurance, sqlstr) == "")
             { }
             sqlstr = @"
@@ -3740,7 +3739,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr += @" order by ex.dte_emp_id,to_number(met.sort_by),to_number(a.id)";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -3873,7 +3872,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (dt.Rows.Count > 0)
@@ -3919,7 +3918,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                             group by doc_id, emp_id
                         )  order by emp_id ";
             dtDef = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtDef, sqlstr) == "")
             {
             }
@@ -3979,7 +3978,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where h.dh_code = '" + doc_id + "' order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -4023,7 +4022,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                             group by doc_id, emp_id
                         )  order by emp_id ";
             dtDef = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dtDef, sqlstr) == "")
             {
             }
@@ -4082,7 +4081,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     where h.dh_code = '" + year + "' order by ex.dte_emp_id,a.id";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -4116,7 +4115,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr = " select a.isos_emp_id as emp_id from bz_doc_isos_record a where substr(a.year,3,2) = substr('"+ doc_id + "',3,2) order by to_number(a.id) ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
             }
@@ -4174,7 +4173,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                   " order by ex.dte_emp_id, to_number(t.id), to_number(l.id) ,to_number(q.id) ,to_number(a.no) ";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -4224,7 +4223,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         ,'false' as action_change
                         from  bz_doc_portal a   ";
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (dt.Rows.Count == 0)
@@ -4248,7 +4247,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             sqlstr = @"select key_value, key_filter from bz_config_data where status = 1 and key_name = 'URL PRACTICE AREAS' ";
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 for (int i = 0; i < dt.Rows.Count; i++)
@@ -4275,7 +4274,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             Boolean pmdv_admin = false;
             string sql = " select emp_id from bz_data_manage where pmdv_admin = 'true' and emp_id = '" + user_id + "'";
             DataTable login_empid = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (login_empid != null && login_empid.Rows.Count > 0)
@@ -4307,7 +4306,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             sqlstr = "select * from(" + sqlstr + ")t where rownum <=50";
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (dt.Rows.Count > 0)
@@ -4356,7 +4355,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 sqlstr += " ) user_action on h.dh_code=user_action.doc_code   where (h.dh_doc_status not in ( 0, 10, 20) )  ";
                 sqlstr += " order by  h.dh_code desc";
                 DataTable dtDefTab = new DataTable();
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (SetDocService.conn_ExecuteData(ref dtDefTab, sqlstr) == "")
                 {
                     if (dtDefTab.Rows.Count > 0)
@@ -4399,7 +4398,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     order by to_number(a.id)";
 
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
 
@@ -4415,7 +4414,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
         {
             sqlstr = " select distinct case when dh_type like 'local%' then 'local' else 'oversea' end doc_type from bz_doc_head h  where h.dh_code = '" + filter_value + "'  ";
             dt = new DataTable();
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 try
@@ -6165,7 +6164,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         from BZ_FILE_DATA a 
                         left join bz_users u on (case when a.update_by is null then a.create_by else a.update_by end ) = u.userid 
                         where a.page_name = 'khcode'";
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
             {
                 if (dt.Rows.Count > 0)
@@ -7739,14 +7738,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             catch (Exception ex) { ret = "false"; msg_error = ex.Message.ToString() + msg; }
 
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
-
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error; 
 
             return data;
         }
@@ -7831,13 +7829,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             catch (Exception ex) { ret = "false"; msg_error = ex.Message.ToString() + msg; }
 
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -8571,13 +8569,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             catch (Exception ex) { ret = "false"; msg_error = ex.Message.ToString() + msg; }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -8760,13 +8758,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             catch (Exception ex) { ret = "false"; msg_error = ex.Message.ToString() + msg; }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }

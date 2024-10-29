@@ -115,7 +115,8 @@ namespace top.ebiz.service
             modelBuilder.Entity<DocList3Model>().HasNoKey();
             modelBuilder.Entity<docFlow2_travel>().HasNoKey();
             modelBuilder.Entity<doc2ApproverModel>().HasNoKey();
-            modelBuilder.Entity<DocFileListModel>().HasNoKey();
+            modelBuilder.Entity<DocFileListInModel>().HasNoKey();
+            modelBuilder.Entity<DocFileListOutModel>().HasNoKey(); 
             modelBuilder.Entity<allApproveModel>().HasNoKey();
             modelBuilder.Entity<SearchCAP_TraverlerModel>().HasNoKey();
             modelBuilder.Entity<SearchUserModel>().HasNoKey();
@@ -186,9 +187,8 @@ namespace top.ebiz.service
         public DbSet<docFlow2_travel> DocFlow2TravelList { get; set; }
         public DbSet<doc2ApproverModel> Doc2ApproverModelList { get; set; }
 
-        public DbSet<DocFileListModel> DocFileListModelList { get; set; }
-
-
+        public DbSet<DocFileListOutModel> DocFileListOutModelList { get; set; }
+        
         public DbSet<allApproveModel> AllApproveModelList { get; set; }
         public DbSet<SearchCAP_TraverlerModel> SearchCAP_TraverlerModelList { get; set; }
         public DbSet<SearchUserModel> SearchUserModelList { get; set; }

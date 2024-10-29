@@ -192,7 +192,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         }
         SetDocService sw;
-        cls_connection_ebiz conn;
+        cls_connection conn;
         string sqlstr = "";
         string sqlstr_all = "";
         string ret = "";
@@ -248,13 +248,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -309,13 +310,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -375,13 +377,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -447,13 +450,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -514,13 +518,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -583,13 +588,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -650,13 +656,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -741,13 +748,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -783,13 +791,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
 
             string status_msg = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "";
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "";
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -860,13 +869,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -960,13 +970,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -984,13 +995,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -1008,13 +1020,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -1030,13 +1043,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -1114,13 +1128,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             string status_msg = "";
             data.data_type = "";
-           //data.after_trip.opt1 = "true";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = status_msg;
-           //data.after_trip.opt2.remark = "";
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = doc_type;
-           //data.after_trip.opt3.remark = "";
+
+            data.after_trip.opt1 = "true";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = status_msg;
+            data.after_trip.opt2.remark = "";
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = doc_type;
+            data.after_trip.opt3.remark = "";
 
             return data;
         }

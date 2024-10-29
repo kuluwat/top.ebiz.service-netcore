@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
+﻿
+using top.ebiz.service.Models.Create_Trip;
 
 namespace top.ebiz.service.Models.Traveler_Profile
 {
@@ -13,7 +10,8 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public string file_page { get; set; }
         public string file_emp { get; set; }
         public string file_type { get; set; }
-        public ImgList img_list { get; set; } = new ImgList(); 
-       //public afterTripModel after_trip { get; set; } = new afterTripModel();
-    } 
+        public ImgList img_list { get; set; } = new ImgList();
+
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
+    }
 }

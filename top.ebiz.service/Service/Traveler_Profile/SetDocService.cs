@@ -1,86 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Data;
-using System.Data.Common;
-using top.ebiz.service.Models.Traveler_Profile;
-//using Oracle.ManagedDataAccess.Client;
-//using System.Data.Entity;
-
-//using System.Data.OracleClient;
-//using Newtonsoft.Json;
-using System.Text.Json;
-using top.ebiz.service.Models.Traveler_Profile;
-using top.ebiz.service.Service.Traveler_Profile;
+﻿
 using OfficeOpenXml;
-//using System.IO;
-//using System.DirectoryServices;
-//using System.Data.OleDb;
-//using OfficeOpenXml;
-//using System.Web.Script.Serialization;
+using Oracle.ManagedDataAccess.Client;
+using System.Data;
+using top.ebiz.service.Models.Traveler_Profile;
 
-namespace top.ebiz.service.Service.Traveler_Profile 
+namespace top.ebiz.service.Service.Traveler_Profile
 {
 
     public class SetDocService
     {
-        cls_connection_ebiz conn;
+        ClassConnectionDb _conn = new ClassConnectionDb();
+        List<OracleParameter> parameters = new List<OracleParameter>();
+
         string sqlstr = "";
         string sqlstr_all = "";
         string ret = "";
         DataTable dt;
-        string SystemUser = System.Configuration.ConfigurationManager.AppSettings["SystemUser"].ToString();
-        string SystemPass = System.Configuration.ConfigurationManager.AppSettings["SystemPass"].ToString();
 
-        internal static string conn_ptai_ExecuteData(ref DataTable dtSelect, string sqlstr)
-        {
-            dtSelect = new DataTable();
-            try
-            {
-                //adapter_data
-                //ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
-                //dtSelect = conn_ws.adapter_data_ptai(sqlstr);
-                return "";
-            }
-            catch (Exception ex)
-            {
-                return ex.Message.ToString();
-            }
-        }
-        internal static string conn_ExecuteData(ref DataTable dtSelect, string sqlstr)
-        {
-            dtSelect = new DataTable();
-            try
-            {
-                //adapter_data
-                //ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
-                //dtSelect = conn_ws.adapter_data(sqlstr);
-                return "";
-            }
-            catch (Exception ex)
-            {
-                return ex.Message.ToString();
-            }
-        }
-        internal static string conn_ExecuteNonQuery(string sqlstr, Boolean type_check)
-        {
-            try
-            {
-                string ret = "";
-                //ws_conn.wsConnection conn_ws = new ws_conn.wsConnection();
-                //ebiz.webservice.Table.wsConnection conn_ws = new Table.wsConnection();
-                //string ret = conn_ws.execute_data(sqlstr, type_check);
-                if (ret == "") { ret = "true"; }
-                if (ret.ToLower() == "true") { ret = "true"; }
-                return ret;
-
-            }
-            catch (Exception ex)
-            {
-                return ex.Message.ToString();
-            }
-        }
+        string SystemUser = configApp.GetStringFromAppSettings("SystemUser") ?? "";// System.Configuration.ConfigurationManager.AppSettings["SystemUser"].ToString();
+        string SystemPass = configApp.GetStringFromAppSettings("SystemPass") ?? "";//System.Configuration.ConfigurationManager.AppSettings["SystemPass"].ToString();
 
         #region Function CPAI 
         //เอาไว้ใน project batch --> เดียวพี่เจตส่งให้
@@ -110,85 +48,77 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
 
         #region Function  
-        private DateTime? chkDate(string value)
+
+        public DataTable CheckPassport(string tablename, string doc_id)
         {
-            DateTime? date = null;
-            try
-            {
-                if (value == null)
-                    return date;
+            //dt = new DataTable();
+            //sqlstr = "select * from " + tablename.ToLower() + " where 1=1 ";
+            //if (doc_id != "") { sqlstr += " and doc_id = '" + doc_id + "'"; }
+            //if (conn_ExecuteData(ref dt, sqlstr) == "")
+            //{
+            //} 
 
-                if (value.Length < 10)
-                    return date;
-
-                date = DateTime.ParseExact(value.Substring(0, 10), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-
-            }
-            catch (Exception ex)
-            {
-
-            }
-            return date;
-        }
-
-        private string retCheckValue(string value)
-        {
-            string ret = "N";
-            try
-            {
-                if (value == "true")
-                    ret = "Y";
-            }
-            catch (Exception ex)
-            {
-
-            }
-            return ret;
-        }
-
-        private decimal? retDecimal(string value)
-        {
-            decimal? ret = null;
-            try
-            {
-                ret = string.IsNullOrEmpty(value) ? ret : Convert.ToDecimal(value);
-            }
-            catch (Exception ex)
-            {
-
-            }
-            return ret;
-        }
-
-        private decimal toDecimal(string value)
-        {
-            decimal ret = 0;
-            try
-            {
-                ret = string.IsNullOrEmpty(value) ? ret : Convert.ToDecimal(value);
-            }
-            catch (Exception ex)
-            {
-
-            }
-            return ret;
-        }
-
-        public DataTable CheckAllData(string tablename, string doc_id)
-        {
             dt = new DataTable();
-            sqlstr = "select * from " + tablename.ToLower() + " where 1=1 ";
-            if (doc_id != "") { sqlstr += " and doc_id = '" + doc_id + "'"; }
-            if (conn_ExecuteData(ref dt, sqlstr) == "")
+            sqlstr = "select * from BZ_DATA_PASSPORT where 1=1 ";
+
+            #region Execute
+            parameters = new List<OracleParameter>();
+            //parameters.Add(_conn.ConvertTypeParameter("xxxx", "xxx" )); 
+            try
             {
+                _conn = new ClassConnectionDb();
+                _conn.OpenConnection();
+                try
+                {
+                    var command = _conn.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    command.Parameters.Add(parameters);
+                    dt = new DataTable();
+                    dt = _conn.ExecuteAdapter(command).Tables[0];
+                    //dt.TableName = "Table1";
+                    dt.AcceptChanges();
+                }
+                catch { }
+                finally { _conn.CloseConnection(); }
             }
+            catch { }
+            #endregion Execute 
+
             return dt;
         }
         public int GetMaxID(string tablename)
         {
+            //??? ต้องเปลี่ยนเป็น StoredProcedure
             dt = new DataTable();
-            sqlstr = "select (nvl( max(to_number(id)),0)+1)as id from " + tablename.ToLower();
-            if (conn_ExecuteData(ref dt, sqlstr) == "")
+            sqlstr = $"select (nvl( max(to_number(id)),0)+1)as id from {tablename}";
+
+            #region Execute 
+            parameters = new List<OracleParameter>();
+            //parameters.Add(_conn.ConvertTypeParameter("xxxx", "xxx" )); 
+            try
+            {
+                _conn = new ClassConnectionDb();
+                _conn.OpenConnection();
+                try
+                {
+                    var command = _conn.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    command.Parameters.Add(parameters);
+                    dt = new DataTable();
+                    dt = _conn.ExecuteAdapter(command).Tables[0];
+                    //dt.TableName = "Table1";
+                    dt.AcceptChanges();
+                }
+                catch { }
+                finally { _conn.CloseConnection(); }
+            }
+            catch { }
+            #endregion Execute 
+
+            //if (conn_ExecuteData(ref dt, sqlstr) == "")
+            if (dt != null)
             {
                 if (dt.Rows.Count > 0)
                 {
@@ -204,8 +134,34 @@ namespace top.ebiz.service.Service.Traveler_Profile
         public int GetMaxIDYear(string tablename)
         {
             dt = new DataTable();
-            sqlstr = "select (nvl( max(to_number(id)),0)+1)as id from " + tablename.ToLower() + " where year = to_char(sysdate,'rrrr') ";
-            if (conn_ExecuteData(ref dt, sqlstr) == "")
+            sqlstr = $"select (nvl( max(to_number(id)),0)+1)as id from {tablename} where year = to_char(sysdate,'rrrr') ";
+
+            #region Execute 
+            parameters = new List<OracleParameter>();
+            //parameters.Add(_conn.ConvertTypeParameter("xxxx", "xxx" )); 
+            try
+            {
+                _conn = new ClassConnectionDb();
+                _conn.OpenConnection();
+                try
+                {
+                    var command = _conn.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    command.Parameters.Add(parameters);
+                    dt = new DataTable();
+                    dt = _conn.ExecuteAdapter(command).Tables[0];
+                    //dt.TableName = "Table1";
+                    dt.AcceptChanges();
+                }
+                catch { }
+                finally { _conn.CloseConnection(); }
+            }
+            catch { }
+            #endregion Execute 
+
+            //if (conn_ExecuteData(ref dt, sqlstr) == "")
+            if (dt != null)
             {
                 if (dt.Rows.Count > 0)
                 {
@@ -221,13 +177,41 @@ namespace top.ebiz.service.Service.Traveler_Profile
         public string sqlEmpRole(string token_login, ref string user_id, ref string user_role, ref Boolean user_admin, string doc_id)
         {
             user_id = ""; user_role = ""; user_admin = false;
+            dt = new DataTable();
+
             sqlstr = @" SELECT distinct a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ,a.TOKEN_CODE as token_code
                         FROM bz_login_token a left join vw_bz_users u on a.user_login = u.userid
                         left join bz_data_manage m on (m.pmsv_admin = 'true' or m.pmdv_admin = 'true') and m.emp_id = a.user_id
-                        WHERE a.TOKEN_CODE = '" + token_login + "'  ";
+                        WHERE a.TOKEN_CODE = :token_login  ";
 
-            dt = new DataTable();
-            if (conn_ExecuteData(ref dt, sqlstr) == "")
+
+            #region Execute 
+            parameters = new List<OracleParameter>();
+            parameters.Add(_conn.ConvertTypeParameter("token_login", token_login));
+            try
+            {
+                _conn = new ClassConnectionDb();
+                _conn.OpenConnection();
+                try
+                {
+                    var command = _conn.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    command.Parameters.Add(parameters);
+                    dt = new DataTable();
+                    dt = _conn.ExecuteAdapter(command).Tables[0];
+                    //dt.TableName = "Table1";
+                    dt.AcceptChanges();
+                }
+                catch { }
+                finally { _conn.CloseConnection(); }
+            }
+            catch { }
+            #endregion Execute 
+
+
+            //if (conn_ExecuteData(ref dt, sqlstr) == "")
+            if (dt != null)
             {
                 if (dt.Rows.Count > 0)
                 {
@@ -241,12 +225,39 @@ namespace top.ebiz.service.Service.Traveler_Profile
             if (user_role == "1") { user_admin = true; }
             else
             {
-                sqlstr = " select emp_id from bz_data_manage where ( pmsv_admin = 'true' ) and emp_id = '" + user_id + "'";
+                sqlstr = " select emp_id from bz_data_manage where ( pmsv_admin = 'true' ) and emp_id = :user_id ";
                 DataTable login_empid = new DataTable();
-                conn = new cls_connection_ebiz();
-                if (SetDocService.conn_ExecuteData(ref login_empid, sqlstr) == "")
+
+                #region Execute 
+                parameters = new List<OracleParameter>();
+                parameters.Add(_conn.ConvertTypeParameter("user_id", user_id));
+                try
                 {
-                    if (login_empid != null && login_empid.Rows.Count > 0)
+                    _conn = new ClassConnectionDb();
+                    _conn.OpenConnection();
+                    try
+                    {
+                        var command = _conn.conn.CreateCommand();
+                        //command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = sqlstr;
+                        command.Parameters.Add(parameters);
+                        login_empid = new DataTable();
+                        login_empid = _conn.ExecuteAdapter(command).Tables[0];
+                        //login_empid.TableName = "Table1";
+                        login_empid.AcceptChanges();
+                    }
+                    catch { }
+                    finally { _conn.CloseConnection(); }
+                }
+                catch { }
+                #endregion Execute 
+
+
+                //conn = new cls_connection();
+                //if (SetDocService.conn_ExecuteData(ref login_empid, sqlstr) == "")
+                if (dt != null)
+                {
+                    if (dt != null && dt.Rows.Count > 0)
                     {
                         user_admin = true;
                     }
@@ -259,10 +270,34 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 {
                     if (doc_id.IndexOf("T") > -1)
                     {
-                        sqlstr = " select emp_id from bz_data_manage where ( pmdv_admin = 'true' ) and emp_id = '" + user_id + "'";
                         DataTable login_empid = new DataTable();
-                        conn = new cls_connection_ebiz();
-                        if (SetDocService.conn_ExecuteData(ref login_empid, sqlstr) == "")
+                        sqlstr = " select emp_id from bz_data_manage where ( pmdv_admin = 'true' ) and emp_id = :user_id ";
+
+                        #region Execute 
+                        parameters = new List<OracleParameter>();
+                        parameters.Add(_conn.ConvertTypeParameter("user_id", user_id));
+                        try
+                        {
+                            _conn = new ClassConnectionDb();
+                            _conn.OpenConnection();
+                            try
+                            {
+                                var command = _conn.conn.CreateCommand();
+                                //command.CommandType = CommandType.StoredProcedure;
+                                command.CommandText = sqlstr;
+                                command.Parameters.Add(parameters);
+                                login_empid = new DataTable();
+                                login_empid = _conn.ExecuteAdapter(command).Tables[0];
+                                //login_empid.TableName = "Table1";
+                                login_empid.AcceptChanges();
+                            }
+                            catch { }
+                            finally { _conn.CloseConnection(); }
+                        }
+                        catch { }
+                        #endregion Execute 
+                        //conn = new cls_connection();
+                        //if (SetDocService.conn_ExecuteData(ref login_empid, sqlstr) == "")
                         {
                             if (login_empid != null && login_empid.Rows.Count > 0)
                             {
@@ -284,11 +319,35 @@ namespace top.ebiz.service.Service.Traveler_Profile
             dt = new DataTable();
             sqlstr = @" SELECT a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ,a.TOKEN_CODE as token_code
                         FROM bz_login_token a left join vw_bz_users u on a.user_login = u.userid
-                        WHERE a.TOKEN_CODE = '" + token_login + "'  ";
+                        WHERE a.TOKEN_CODE = :token_login ";
 
-            dt = new DataTable();
-            conn = new cls_connection_ebiz();
-            if (conn_ExecuteData(ref dt, sqlstr) == "")
+            #region Execute
+            parameters = new List<OracleParameter>();
+            parameters.Add(_conn.ConvertTypeParameter("token_login", token_login));
+            try
+            {
+                _conn = new ClassConnectionDb();
+                _conn.OpenConnection();
+                try
+                {
+                    var command = _conn.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    command.Parameters.Add(parameters);
+                    dt = new DataTable();
+                    dt = _conn.ExecuteAdapter(command).Tables[0];
+                    //dt.TableName = "Table1";
+                    dt.AcceptChanges();
+                }
+                catch { }
+                finally { _conn.CloseConnection(); }
+            }
+            catch { }
+            #endregion Execute 
+
+            //conn = new cls_connection();
+            //if (conn_ExecuteData(ref dt, sqlstr) == "")
+            if (dt != null)
             {
                 if (dt.Rows.Count > 0)
                 {
@@ -303,11 +362,32 @@ namespace top.ebiz.service.Service.Traveler_Profile
             dt = new DataTable();
             sqlstr = @" SELECT a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ,a.TOKEN_CODE as token_code
                         FROM bz_login_token a left join vw_bz_users u on a.user_login = u.userid
-                        WHERE a.TOKEN_CODE = '" + token_login + "'  ";
+                        WHERE a.TOKEN_CODE = :token_login ";
 
-            dt = new DataTable();
-            conn = new cls_connection_ebiz();
-            if (conn_ExecuteData(ref dt, sqlstr) == "")
+            #region Execute
+            parameters = new List<OracleParameter>();
+            parameters.Add(_conn.ConvertTypeParameter("token_login", token_login));
+            try
+            {
+                _conn = new ClassConnectionDb();
+                _conn.OpenConnection();
+                try
+                {
+                    var command = _conn.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    command.Parameters.Add(parameters);
+                    dt = new DataTable();
+                    dt = _conn.ExecuteAdapter(command).Tables[0];
+                    //dt.TableName = "Table1";
+                    dt.AcceptChanges();
+                }
+                catch { }
+                finally { _conn.CloseConnection(); }
+            }
+            catch { }
+            #endregion Execute 
+            if (dt != null)
             {
                 if (dt.Rows.Count > 0)
                 {
@@ -323,11 +403,32 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr = @" SELECT a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ,a.TOKEN_CODE as token_code
                         ,case when u.usertype = 2 then u.enfirstname else nvl(u.entitle, '')|| ' ' || u.enfirstname || ' ' || u.enlastname  end userdisplay
                         FROM bz_login_token a left join vw_bz_users u on a.user_login = u.userid
-                        WHERE a.TOKEN_CODE = '" + token_login + "'  ";
+                        WHERE a.TOKEN_CODE = :token_login ";
 
-            dt = new DataTable();
-            conn = new cls_connection_ebiz();
-            if (conn_ExecuteData(ref dt, sqlstr) == "")
+            #region Execute
+            parameters = new List<OracleParameter>();
+            parameters.Add(_conn.ConvertTypeParameter("token_login", token_login));
+            try
+            {
+                _conn = new ClassConnectionDb();
+                _conn.OpenConnection();
+                try
+                {
+                    var command = _conn.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    command.Parameters.Add(parameters);
+                    dt = new DataTable();
+                    dt = _conn.ExecuteAdapter(command).Tables[0];
+                    //dt.TableName = "Table1";
+                    dt.AcceptChanges();
+                }
+                catch { }
+                finally { _conn.CloseConnection(); }
+            }
+            catch { }
+            #endregion Execute 
+            if (dt != null)
             {
                 if (dt.Rows.Count > 0)
                 {
@@ -343,11 +444,32 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr = @" SELECT a.USER_NAME, a.user_id, to_char(u.ROLE_ID) user_role ,a.TOKEN_CODE as token_code, u.email
                         ,case when u.usertype = 2 then u.enfirstname else nvl(u.entitle, '')|| ' ' || u.enfirstname || ' ' || u.enlastname  end userdisplay
                         FROM bz_login_token a left join vw_bz_users u on a.user_login = u.userid
-                        WHERE a.TOKEN_CODE = '" + token_login + "'  ";
+                        WHERE a.TOKEN_CODE = :token_login ";
 
-            dt = new DataTable();
-            conn = new cls_connection_ebiz();
-            if (conn_ExecuteData(ref dt, sqlstr) == "")
+            #region Execute
+            parameters = new List<OracleParameter>();
+            parameters.Add(_conn.ConvertTypeParameter("token_login", token_login));
+            try
+            {
+                _conn = new ClassConnectionDb();
+                _conn.OpenConnection();
+                try
+                {
+                    var command = _conn.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    command.Parameters.Add(parameters);
+                    dt = new DataTable();
+                    dt = _conn.ExecuteAdapter(command).Tables[0];
+                    //dt.TableName = "Table1";
+                    dt.AcceptChanges();
+                }
+                catch { }
+                finally { _conn.CloseConnection(); }
+            }
+            catch { }
+            #endregion Execute 
+            if (dt != null)
             {
                 if (dt.Rows.Count > 0)
                 {
@@ -371,8 +493,44 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 if (true)
                 {
                     DataTable dt = new DataTable();
-                    sqlstr = @"select key_value as name  from  bz_config_data where trim(lower(key_name)) =trim(lower('" + group_key_name + "')) ";
-                    if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
+                    sqlstr = @"select key_value as name  from  bz_config_data where trim(lower(key_name)) = trim(lower(:group_key_name)) ";
+
+                    #region Execute 
+                    _conn = new ClassConnectionDb();
+                    parameters = new List<OracleParameter>();
+                    parameters.Add(_conn.ConvertTypeParameter("group_key_name", group_key_name));
+                    try
+                    {
+                        _conn = new ClassConnectionDb();
+                        _conn.OpenConnection();
+                        try
+                        {
+                            var command = _conn.conn.CreateCommand();
+                            //command.CommandType = CommandType.StoredProcedure;
+                            command.CommandText = sqlstr;
+                            if (parameters != null && parameters?.Count > 0)
+                            {
+                                foreach (var _param in parameters)
+                                {
+                                    if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                                    {
+                                        command.Parameters.Add(_param);
+                                    }
+                                }
+                                command.Parameters.AddRange(parameters?.ToArray());
+                            }
+                            dt = new DataTable();
+                            dt = _conn.ExecuteAdapter(command).Tables[0];
+                            //dt.TableName = "Table1";
+                            dt.AcceptChanges();
+                        }
+                        catch { }
+                        finally { _conn.CloseConnection(); }
+                    }
+                    catch { }
+                    #endregion Execute 
+
+                    if (dt != null)
                     {
                         if (dt.Rows.Count > 0)
                         {
@@ -389,6 +547,8 @@ namespace top.ebiz.service.Service.Traveler_Profile
                                 String str = String.Format("LDAP://{0}", domain);
                                 String str2 = String.Format(("{0}\\" + UserName.Trim()), domain);
                                 String pass = Password;
+
+                                //??? ต้องปรับ code เพิ่มเติม
                                 //DirectoryEntry Entry = new DirectoryEntry(str, str2, pass);
                                 //DirectorySearcher search = new DirectorySearcher(Entry);
                                 //search.Filter = "(&(objectClass=user)(objectCategory=person)(memberOf=" + memberOf + "))";
@@ -433,43 +593,128 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         //update role_id = 1 
                         if (lstADUsers.Count > 0)
                         {
-                            for (int i = 0; i < lstADUsers.Count; i++)
+
+                            using (ClassConnectionDb transaction = new ClassConnectionDb())
                             {
-                                sqlstr = "select * from  bz_users where lower(userid) =lower('" + lstADUsers[i].UserName + "') ";
-                                dt = new DataTable();
-                                if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
+                                transaction.OpenConnection();
+                                transaction.BeginTransaction();
+
+                                ///sql query string
+
+                                for (int i = 0; i < lstADUsers.Count; i++)
                                 {
-                                    if (dt.Rows.Count == 0)
+                                    var _userName = lstADUsers[i].UserName ?? "";
+
+                                    dt = new DataTable();
+                                    sqlstr = "select * from  bz_users where lower(userid) =lower(:_userName) ";
+
+                                    #region Execute 
+                                    _conn = new ClassConnectionDb();
+                                    parameters = new List<OracleParameter>();
+                                    parameters.Add(_conn.ConvertTypeParameter("_userName", _userName));
+                                    try
                                     {
-                                        //เพิ่ม/update ข้อมูลในตาราง BZ_USERS  
-                                        sqlstr = @" call bz_sp_add_user_z ( ";
-                                        sqlstr += " 'system'";
-                                        sqlstr += ",'" + lstADUsers[i].UserName.ToString().ToUpper() + "'";
-                                        sqlstr += ",'" + lstADUsers[i].DisplayName.ToString() + "'";
-                                        sqlstr += ",'" + lstADUsers[i].Email.ToString() + "'";
-                                        sqlstr += ",'insert'";
-                                        sqlstr += ")";
-                                        //Stored Procedure ถ้า call จะ update ใน db เลย
-                                        ret = conn_ExecuteNonQuery(sqlstr, false);
-
+                                        _conn = new ClassConnectionDb();
+                                        _conn.OpenConnection();
+                                        try
+                                        {
+                                            var command = _conn.conn.CreateCommand();
+                                            //command.CommandType = CommandType.StoredProcedure;
+                                            command.CommandText = sqlstr;
+                                            if (parameters != null && parameters?.Count > 0)
+                                            {
+                                                foreach (var _param in parameters)
+                                                {
+                                                    if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                                                    {
+                                                        command.Parameters.Add(_param);
+                                                    }
+                                                }
+                                                command.Parameters.AddRange(parameters?.ToArray());
+                                            }
+                                            dt = new DataTable();
+                                            dt = _conn.ExecuteAdapter(command).Tables[0];
+                                            //dt.TableName = "Table1";
+                                            dt.AcceptChanges();
+                                        }
+                                        catch { }
+                                        finally { _conn.CloseConnection(); }
                                     }
+                                    catch { }
+                                    #endregion Execute 
 
-                                    ////เนื่องจากมีหน้า maintain ข้อมูล admin ไม่ต้อง set ให้ auto
-                                    //sqlstr = " update bz_users set role_id =1 where lower(userid) =lower('" + lstADUsers[i].UserName + "') ";
-                                    //sqlstr_all += sqlstr + "||";
-                                    //ret = conn_ExecuteNonQuery(sqlstr, false);
-                                    //if (ret.ToLower() != "true") { goto Next_line_1; }
+                                    if (dt != null)
+                                    {
+                                        if (dt.Rows.Count == 0)
+                                        {
+                                            //เพิ่ม/update ข้อมูลในตาราง BZ_USERS  
+                                            var lstADUsers_UserName = lstADUsers[i].UserName.ToString().ToUpper() ?? "";
+                                            var lstADUsers_DisplayName = lstADUsers[i].DisplayName.ToString() ?? "";
+                                            var lstADUsers_Email = lstADUsers[i].Email.ToString() ?? "";
 
-                                    lstADUsers[i].Remark = ret + " --> sqlstr : " + sqlstr;
+                                            sqlstr = @" call bz_sp_add_user_z ( ";
+                                            sqlstr += " 'system'";
+                                            sqlstr += ",:lstADUsers_UserName ";
+                                            sqlstr += ",:lstADUsers_DisplayName";
+                                            sqlstr += ",:lstADUsers_Email";
+                                            sqlstr += ",'insert'";
+                                            sqlstr += ")";
+
+                                            parameters = new List<OracleParameter>();
+                                            parameters.Add(_conn.ConvertTypeParameter("lstADUsers_UserName", lstADUsers_UserName));
+                                            parameters.Add(_conn.ConvertTypeParameter("lstADUsers_DisplayName", lstADUsers_DisplayName));
+                                            parameters.Add(_conn.ConvertTypeParameter("lstADUsers_Email", lstADUsers_Email));
+
+                                            //Stored Procedure ถ้า call จะ update ใน db เลย
+                                            //ret = conn_ExecuteNonQuery(sqlstr, false);
+
+                                            #region ExecuteNonQuerySQL Data
+
+                                            var command = transaction.conn.CreateCommand();
+                                            command.CommandType = CommandType.StoredProcedure;
+                                            command.CommandText = sqlstr;
+                                            if (parameters != null && parameters?.Count > 0)
+                                            {
+                                                foreach (var _param in parameters)
+                                                {
+                                                    if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                                                    {
+                                                        command.Parameters.Add(_param);
+                                                    }
+                                                }
+                                                command.Parameters.AddRange(parameters?.ToArray());
+                                            }
+                                            ret = transaction.ExecuteNonQuerySQL(command);
+                                            if (ret != "true") break;
+
+                                            #endregion  ExecuteNonQuerySQL Data
+
+                                        }
+
+                                        lstADUsers[i].Remark = ret + " --> sqlstr : " + sqlstr;
+                                    }
+                                }
+
+
+                                if (ret == "true")
+                                {
+                                    if (ClassConnectionDb.IsAuthorizedRole())
+                                    {
+                                        // ตรวจสอบสิทธิ์ก่อนดำเนินการ 
+                                        transaction.Commit();
+                                    }
+                                    else
+                                    {
+                                        transaction.Rollback();
+                                    }
+                                }
+                                else
+                                {
+                                    transaction.Rollback();
                                 }
                             }
-                        Next_line_1:;
-                            if (ret.ToLower() == "true")
-                            {
-                                //sqlstr = " update bz_users set role_id = null where  lower(userid) not in ('zattaphonso','zkul-uwat')";
-                                //sqlstr_all += sqlstr + "||" + sqlstr_all;
-                                ret = conn_ExecuteNonQuery(sqlstr_all, false); sqlstr_all = "";
-                            }
+
+
                         }
                     }
 
@@ -497,10 +742,44 @@ namespace top.ebiz.service.Service.Traveler_Profile
             {
                 #region set data 
 
-                conn = new cls_connection_ebiz();
                 DataTable dtcheck = new DataTable();
-                sqlstr = @"select count(1) as xcount from BZ_USER_PEOFILE where EMPLOYEEID = " + conn.ChkSqlStr(data.emp_id, 300);
-                conn_ExecuteData(ref dtcheck, sqlstr);
+                var data_emp_id = data.emp_id ?? "";
+                sqlstr = @"select count(1) as xcount from BZ_USER_PEOFILE where EMPLOYEEID = :data_emp_id ";
+                //conn_ExecuteData(ref dtcheck, sqlstr);
+                #region Execute 
+                _conn = new ClassConnectionDb();
+                parameters = new List<OracleParameter>();
+                parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                try
+                {
+                    _conn = new ClassConnectionDb();
+                    _conn.OpenConnection();
+                    try
+                    {
+                        var command = _conn.conn.CreateCommand();
+                        //command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = sqlstr;
+                        if (parameters != null && parameters?.Count > 0)
+                        {
+                            foreach (var _param in parameters)
+                            {
+                                if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                                {
+                                    command.Parameters.Add(_param);
+                                }
+                            }
+                            command.Parameters.AddRange(parameters?.ToArray());
+                        }
+                        dtcheck = new DataTable();
+                        dtcheck = _conn.ExecuteAdapter(command).Tables[0];
+                        //dt.TableName = "Table1";
+                        dtcheck.AcceptChanges();
+                    }
+                    catch { }
+                    finally { _conn.CloseConnection(); }
+                }
+                catch { }
+                #endregion Execute 
 
                 Boolean bcheckInsert = false;
                 if (dtcheck.Rows.Count > 0)
@@ -513,7 +792,44 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     int imaxid = 1;
                     dt = new DataTable();
                     sqlstr = "select (nvl( max(to_number(id)),0)+1)as id from BZ_USER_PEOFILE";
-                    if (conn_ExecuteData(ref dt, sqlstr) == "")
+
+                    #region Execute 
+                    _conn = new ClassConnectionDb();
+                    parameters = new List<OracleParameter>();
+                    //parameters.Add(_conn.ConvertTypeParameter("xx", xx));
+                    try
+                    {
+                        _conn = new ClassConnectionDb();
+                        _conn.OpenConnection();
+                        try
+                        {
+                            var command = _conn.conn.CreateCommand();
+                            //command.CommandType = CommandType.StoredProcedure;
+                            command.CommandText = sqlstr;
+                            if (parameters != null && parameters?.Count > 0)
+                            {
+                                foreach (var _param in parameters)
+                                {
+                                    if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                                    {
+                                        command.Parameters.Add(_param);
+                                    }
+                                }
+                                command.Parameters.AddRange(parameters?.ToArray());
+                            }
+                            dt = new DataTable();
+                            dt = _conn.ExecuteAdapter(command).Tables[0];
+                            //dt.TableName = "Table1";
+                            dt.AcceptChanges();
+                        }
+                        catch { }
+                        finally { _conn.CloseConnection(); }
+                    }
+                    catch { }
+                    #endregion Execute 
+
+                    if (dt != null)
+                    //if (conn_ExecuteData(ref dt, sqlstr) == "")
                     {
                         if (dt.Rows.Count > 0)
                         {
@@ -524,38 +840,137 @@ namespace top.ebiz.service.Service.Traveler_Profile
                             catch { }
                         }
                     }
-                    sqlstr = @" insert into BZ_USER_PEOFILE (ID,DOC_ID,EMPLOYEEID
+
+                    using (ClassConnectionDb transaction = new ClassConnectionDb())
+                    {
+                        transaction.OpenConnection();
+                        transaction.BeginTransaction();
+
+                        ///sql query string
+                        sqlstr = @" insert into BZ_USER_PEOFILE (ID,DOC_ID,EMPLOYEEID
                                     ,IMGPATH,IMGPROFILENAME,CREATE_BY,CREATE_DATE,UPDATE_BY,UPDATE_DATE,TOKEN_UPDATE)" +
-                                   " values (" +
-                                   " " + imaxid +
-                                   " ," + conn.ChkSqlStr("personal", 300) +
-                                   " ," + conn.ChkSqlStr(data.emp_id, 300) +
-                                   " ," + conn.ChkSqlStr(data.path, 300) +
-                                   " ," + conn.ChkSqlStr(data.filename, 300) +
-                                   " ," + conn.ChkSqlStr("system", 300) +
-                                   " ,sysdate,null,null" +
-                                   " ," + conn.ChkSqlStr(token_login, 300) +
-                                   " ) ";
+                                       " values (" +
+                                       " :imaxid" +
+                                       " , :personal" +
+                                       " , :data_emp_id" +
+                                       " , :data_path" +
+                                       " , :data_filename" +
+                                       " , :system" +
+                                       " , sysdate,null,null" +
+                                       " , :token_login" +
+                                       " ) ";
+                        parameters = new List<OracleParameter>();
+                        parameters.Add(_conn.ConvertTypeParameter("imaxid", imaxid));
+                        parameters.Add(_conn.ConvertTypeParameter("personal", "personal"));
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data.emp_id));
+                        parameters.Add(_conn.ConvertTypeParameter("data_path", data.path));
+                        parameters.Add(_conn.ConvertTypeParameter("data_filename", data.filename));
+                        parameters.Add(_conn.ConvertTypeParameter("system", "system"));
+                        parameters.Add(_conn.ConvertTypeParameter("token_login", token_login));
+
+                        #region ExecuteNonQuerySQL Data
+
+                        var command = transaction.conn.CreateCommand();
+                        //command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = sqlstr;
+                        if (parameters != null && parameters?.Count > 0)
+                        {
+                            foreach (var _param in parameters)
+                            {
+                                if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                                {
+                                    command.Parameters.Add(_param);
+                                }
+                            }
+                            command.Parameters.AddRange(parameters?.ToArray());
+                        }
+                        ret = transaction.ExecuteNonQuerySQL(command);
+                        //if (ret != "true") break;
+
+                        #endregion  ExecuteNonQuerySQL Data
+                        if (ret == "true")
+                        {
+                            if (ClassConnectionDb.IsAuthorizedRole())
+                            {
+                                // ตรวจสอบสิทธิ์ก่อนดำเนินการ 
+                                transaction.Commit();
+                            }
+                            else
+                            {
+                                transaction.Rollback();
+                            }
+                        }
+                        else
+                        {
+                            transaction.Rollback();
+                        }
+                    }
+
+
+
                 }
                 else
                 {
-                    sqlstr = " update BZ_USER_PEOFILE set " +
-                               " IMGPATH = " + conn.ChkSqlStr(data.path, 300) +
-                               " ,IMGPROFILENAME = " + conn.ChkSqlStr(data.filename, 300) +
-                               " ,UPDATE_BY =" + conn.ChkSqlStr(token_login, 300) +
-                               " ,UPDATE_DATE = sysdate" +
-                               " where EMPLOYEEID = " + conn.ChkSqlStr(data.emp_id, 300);
-                }
-                ret = conn_ExecuteNonQuery(sqlstr, true);
-                sqlstr_all += sqlstr + "||";
 
-                if (ret.ToLower() != "true") { goto Next_line_1; }
+                    using (ClassConnectionDb transaction = new ClassConnectionDb())
+                    {
+                        transaction.OpenConnection();
+                        transaction.BeginTransaction();
 
-            Next_line_1:;
+                        ///sql query string
+                        sqlstr = " update BZ_USER_PEOFILE set " +
+                                   " IMGPATH = :data_path " +
+                                   " ,IMGPROFILENAME = :data_filename " +
+                                   " ,UPDATE_BY = :token_login" +
+                                   " ,UPDATE_DATE = sysdate" +
+                                   " where EMPLOYEEID = :data_emp_id ";
 
-                if (ret.ToLower() == "true")
-                {
-                    ret = conn_ExecuteNonQuery(sqlstr_all, false); sqlstr_all = "";
+                        parameters = new List<OracleParameter>();
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data.emp_id));
+                        parameters.Add(_conn.ConvertTypeParameter("data_path", data.path));
+                        parameters.Add(_conn.ConvertTypeParameter("data_filename", data.filename));
+                        parameters.Add(_conn.ConvertTypeParameter("token_login", token_login));
+
+
+                        #region ExecuteNonQuerySQL Data
+
+                        var command = transaction.conn.CreateCommand();
+                        //command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = sqlstr;
+                        if (parameters != null && parameters?.Count > 0)
+                        {
+                            foreach (var _param in parameters)
+                            {
+                                if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                                {
+                                    command.Parameters.Add(_param);
+                                }
+                            }
+                            command.Parameters.AddRange(parameters?.ToArray());
+                        }
+                        ret = transaction.ExecuteNonQuerySQL(command);
+                        //if (ret != "true") break;
+
+                        #endregion  ExecuteNonQuerySQL Data
+
+                        if (ret == "true")
+                        {
+                            if (ClassConnectionDb.IsAuthorizedRole())
+                            {
+                                // ตรวจสอบสิทธิ์ก่อนดำเนินการ 
+                                transaction.Commit();
+                            }
+                            else
+                            {
+                                transaction.Rollback();
+                            }
+                        }
+                        else
+                        {
+                            transaction.Rollback();
+                        }
+                    }
+
                 }
 
                 #endregion set data
@@ -565,14 +980,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             data.remark = ret;
 
+            //??? ไม่แน่ใจ
             //mLog = new logService.logModel();
             //js = new JavaScriptSerializer();
             //mLog.module = "UploadFile:Img-End";
             //mLog.tevent = ret;
             //mLog.ref_id = 0;
             //mLog.data_log = JsonSerializer.Serialize(data);
-            //logService.insertLog(mLog);
-
+            //logService.insertLog(mLog); 
 
             return data;
         }
@@ -584,64 +999,133 @@ namespace top.ebiz.service.Service.Traveler_Profile
             #region set data 
             int imaxid = GetMaxID("BZ_DOC_IMG");
 
-            conn = new cls_connection_ebiz();
-
-            if (action_type == "insert")
+            using (ClassConnectionDb transaction = new ClassConnectionDb())
             {
-                //กรณีที่มีข้อมูลเก่า id เดียวกันให้ ลบก่อน
-                sqlstr = " update from BZ_DOC_IMG set " +
-                          " STATUS = 0" +
-                          " where EMP_ID = " + conn.ChkSqlStr(data.emp_id, 300) +
-                          " and DOC_ID =" + conn.ChkSqlStr(data.doc_id, 300) +
-                          " and ID =" + conn.ChkSqlStr(data.id, 300);
+                transaction.OpenConnection();
+                transaction.BeginTransaction();
 
-                ret = conn_ExecuteNonQuery(sqlstr, true);
-                sqlstr_all += sqlstr + "||";
-                if (ret.ToLower() != "true") { goto Next_line_1; }
 
-                //กรณีที่มีข้อมูลเก่า id เดียวกันให้ ลบก่อน
-                var id = "";
-                if (data.id.ToString() == "") { id = imaxid.ToString(); imaxid++; }
-                sqlstr = " insert into BZ_DOC_IMG (ID,DOC_ID,EMP_ID,PATH,FILE_NAME,PAGE_NAME,ACTION_NAME,STATUS,CREATE_BY,CREATE_DATE,TOKEN_UPDATE) " +
-                      " values ( " +
-                      " " + conn.ChkSqlStr(id, 300) +
-                      " , " + conn.ChkSqlStr(data.doc_id, 300) +
-                      " , " + conn.ChkSqlStr(data.emp_id, 300) +
-                      " , " + conn.ChkSqlStr(data.path, 300) +
-                      " , " + conn.ChkSqlStr(data.filename, 300) +
-                      " , " + conn.ChkSqlStr(data.filename, 300) +
-                      " , " + conn.ChkSqlStr(data.pagename, 300) +
-                      " , " + conn.ChkSqlStr(data.actionname, 300) +
-                      " , " + conn.ChkSqlStr(data.modified_by, 300) +
-                      " , 1" +
-                      " , sysdate,null" +
-                      " )";
+                if (action_type == "insert" || action_type == "delete")
+                {
+                    ///sql query string 
+                    if (action_type == "insert")
+                    {
+                        //กรณีที่มีข้อมูลเก่า id เดียวกันให้ ลบก่อน
+                        sqlstr = " update from BZ_DOC_IMG set " +
+                                  " STATUS = 0" +
+                                  " where EMP_ID = " + conn.ChkSqlStr(data.emp_id, 300) +
+                                  " and DOC_ID =" + conn.ChkSqlStr(data.doc_id, 300) +
+                                  " and ID =" + conn.ChkSqlStr(data.id, 300);
 
-                ret = conn_ExecuteNonQuery(sqlstr, true);
-                sqlstr_all += sqlstr + "||";
-                if (ret.ToLower() != "true") { goto Next_line_1; }
+                        parameters = new List<OracleParameter>();
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+
+                        #region ExecuteNonQuerySQL Data
+
+                        var command = transaction.conn.CreateCommand();
+                        //command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = sqlstr;
+                        if (parameters != null && parameters?.Count > 0)
+                        {
+                            foreach (var _param in parameters)
+                            {
+                                if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                                {
+                                    command.Parameters.Add(_param);
+                                }
+                            }
+                            command.Parameters.AddRange(parameters?.ToArray());
+                        }
+                        ret = transaction.ExecuteNonQuerySQL(command);
+                        //if (ret != "true") break;
+
+                        #endregion  ExecuteNonQuerySQL Data
+
+                    }
+
+
+                    parameters = new List<OracleParameter>();
+
+                    if (action_type == "insert")
+                    {
+                        //กรณีที่มีข้อมูลเก่า id เดียวกันให้ ลบก่อน
+                        var id = "";
+                        if (data.id.ToString() == "") { id = imaxid.ToString(); imaxid++; }
+                        sqlstr = " insert into BZ_DOC_IMG (ID,DOC_ID,EMP_ID,PATH,FILE_NAME,PAGE_NAME,ACTION_NAME,STATUS,CREATE_BY,CREATE_DATE,TOKEN_UPDATE) " +
+                              " values ( " +
+                              " " + conn.ChkSqlStr(id, 300) +
+                              " , " + conn.ChkSqlStr(data.doc_id, 300) +
+                              " , " + conn.ChkSqlStr(data.emp_id, 300) +
+                              " , " + conn.ChkSqlStr(data.path, 300) +
+                              " , " + conn.ChkSqlStr(data.filename, 300) +
+                              " , " + conn.ChkSqlStr(data.filename, 300) +
+                              " , " + conn.ChkSqlStr(data.pagename, 300) +
+                              " , " + conn.ChkSqlStr(data.actionname, 300) +
+                              " , " + conn.ChkSqlStr(data.modified_by, 300) +
+                              " , 1" +
+                              " , sysdate,null" +
+                              " )";
+
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                    }
+                    else if (action_type == "delete")
+                    {
+                        sqlstr = " update from BZ_DOC_IMG set " +
+                                   " STATUS = 0" +
+                                   " where EMP_ID = " + conn.ChkSqlStr(data.emp_id, 300) +
+                                   " and DOC_ID =" + conn.ChkSqlStr(data.doc_id, 300) +
+                                   " and ID =" + conn.ChkSqlStr(data.id, 300);
+
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                        parameters.Add(_conn.ConvertTypeParameter("data_emp_id", data_emp_id, "char", 300));
+                    }
+
+                    #region ExecuteNonQuerySQL Data
+
+                    var command = transaction.conn.CreateCommand();
+                    //command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = sqlstr;
+                    if (parameters != null && parameters?.Count > 0)
+                    {
+                        foreach (var _param in parameters)
+                        {
+                            if (_param != null && !command.Parameters.Contains(_param.ParameterName))
+                            {
+                                command.Parameters.Add(_param);
+                            }
+                        }
+                        command.Parameters.AddRange(parameters?.ToArray());
+                    }
+                    ret = transaction.ExecuteNonQuerySQL(command);
+                    //if (ret != "true") break;
+
+                    #endregion  ExecuteNonQuerySQL Data
+                }
+
+
+                if (ret == "true")
+                {
+                    if (ClassConnectionDb.IsAuthorizedRole())
+                    {
+                        // ตรวจสอบสิทธิ์ก่อนดำเนินการ 
+                        transaction.Commit();
+                    }
+                    else
+                    {
+                        transaction.Rollback();
+                    }
+                }
+                else
+                {
+                    transaction.Rollback();
+                }
             }
-            else if (action_type == "delete")
-            {
-                sqlstr = " update from BZ_DOC_IMG set " +
-                           " STATUS = 0" +
-                           " where EMP_ID = " + conn.ChkSqlStr(data.emp_id, 300) +
-                           " and DOC_ID =" + conn.ChkSqlStr(data.doc_id, 300) +
-                           " and ID =" + conn.ChkSqlStr(data.id, 300);
 
-
-                ret = conn_ExecuteNonQuery(sqlstr, true);
-                sqlstr_all += sqlstr + "||";
-
-                if (ret.ToLower() != "true") { goto Next_line_1; }
-            }
-
-        Next_line_1:;
-
-            if (ret.ToLower() == "true")
-            {
-                ret = conn_ExecuteNonQuery(sqlstr_all, false); sqlstr_all = "";
-            }
 
             #endregion set data
 
@@ -669,7 +1153,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     }
                 }
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 for (int i = 0; i < dtlist.Rows.Count; i++)
                 {
@@ -765,15 +1249,16 @@ namespace top.ebiz.service.Service.Traveler_Profile
             catch (Exception ex) { msg_error = ex.Message.ToString(); }
 
         #endregion Determine whether the directory exists.
+
         next_line_1:;
 
-           //data.after_trip.opt1 = (ret ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
-           //data.after_trip.opt2.remark = (ret ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "";
-           //data.after_trip.opt3.remark = "";
+            data.after_trip.opt1 = (ret ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
+            data.after_trip.opt2.remark = (ret ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "";
+            data.after_trip.opt3.remark = "";
 
             return data;
         }
@@ -931,9 +1416,9 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 }
                 catch (Exception ex) { msg_error = ex.Message.ToString(); }
 
-            #endregion Determine whether the directory exists.
+                #endregion Determine whether the directory exists.
 
-            next_line_1:;
+                //next_line_1:;
 
                 if ((ret ?? "") == "true")
                 {
@@ -993,14 +1478,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             catch (Exception ex_msg) { msg_error = ex_msg.Message.ToString() + " ---- " + msg_rows; }
 
-
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "SaveAs FullPathName";
-           //data.after_trip.opt3.remark = _FullPathName;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "SaveAs FullPathName";
+            data.after_trip.opt3.remark = _FullPathName;
 
             return data;
         }
@@ -1200,7 +1684,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                                     ,DATA_FOR_SAP
                                     ,CREATE_BY,CREATE_DATE,TOKEN_UPDATE) values ( ";
 
-                    conn = new cls_connection_ebiz();
+                    conn = new cls_connection();
                     sqlstr += @" " + imaxid;
                     sqlstr += @" ," + conn.ChkSqlStr(emp_id, 300);
 
@@ -1274,7 +1758,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
         }
 
         public string SetImgList(List<ImgList> value, int imaxidImg, string emp_user_active, string token_login
-            , ref cls_connection_ebiz conn, ref string sqlstr_all)
+            , ref cls_connection conn, ref string sqlstr_all)
         {
             List<ImgList> dtlist = value;
             for (int i = 0; i < dtlist.Count; i++)
@@ -1427,7 +1911,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                             from bz_data_passport 
                             where default_type = 'true' and emp_id ='" + emp_id + "' and ( select to_char(usertype) as x from vw_bz_users where employeeid ='" + emp_id + "') = '1' ";
                 dt = new DataTable();
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                 {
                     if (dt.Rows.Count > 0)
@@ -1439,7 +1923,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                                     where status = 1 
                                     and emp_id ='" + emp_id + "' and passport_no = '" + dt.Rows[0]["passport_no"].ToString() + "' and passport_date_issue = '" + dt.Rows[0]["passport_date_issue"].ToString() + "' and passport_date_expire = '" + dt.Rows[0]["passport_date_expire"].ToString() + "'";
                         dt = new DataTable();
-                        conn = new cls_connection_ebiz();
+                        conn = new cls_connection();
                         if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                         {
                             if (dt.Rows.Count > 0)
@@ -1497,7 +1981,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
         }
         internal static int SendDataPassortToSAP(string token_login)
         {
-            cls_connection_ebiz conn = new cls_connection_ebiz();
+            cls_connection conn = new cls_connection();
             string ret = "";
             DataTable dtdata = new DataTable();
             int iResult = -1;
@@ -1529,7 +2013,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
                     if (istatus == 1)
                     {
-                        conn = new cls_connection_ebiz();
+                        conn = new cls_connection();
                         sqlstr = "update bz_passport  set status = '" + istatus.ToString() + "', sap_last_update_date = sysdate, sap_last_update_by = " + conn.ChkSqlStr(last_update_by, 50) + "" +
                                  " where emp_id = " + emp_id +
                                  " and passport_no =" + conn.ChkSqlStr(passport_no, 50);
@@ -1542,7 +2026,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 {
                     //ret = conn_ExecuteNonQuery(sqlstr_all, true);
                     ret = execute_data_ex(sqlstr_all, false);
-                    conn = new cls_connection_ebiz();
+                    conn = new cls_connection();
 
                     sqlstr = @"call bz_sp_insert_log('SendDataPassortToSAP', " + conn.ChkSqlStr(ret, 300) + ", null, null, null, null, " + conn.ChkSqlStr(token_login, 300) + ");";
                     //ret = conn_ExecuteNonQuery(sqlstr, true);
@@ -1561,7 +2045,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
 
             DataTable dt = new DataTable();
-            cls_connection_ebiz conn = new cls_connection_ebiz();
+            cls_connection conn = new cls_connection();
             conn.OpenConnection();
             conn.BeginTransaction();
 
@@ -1615,7 +2099,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             if (data.traveler_emp.Count > 0)
             {
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 List<travelerEmpList> dtlist = data.traveler_emp;
                 for (int i = 0; i < dtlist.Count; i++)
@@ -1639,7 +2123,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     //}
 
                     DataTable dtEmp = new DataTable();
-                    conn = new cls_connection_ebiz();
+                    conn = new cls_connection();
                     if (SetDocService.conn_ExecuteData(ref dtEmp, sqlstr) == "")
                     {
                         if (dtEmp.Rows.Count > 0)
@@ -1705,13 +2189,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
             {
                 msg_error = ret + " --> query error :" + sqlstr;
             }
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1737,7 +2222,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sqlstr = @" select distinct emp_id from bz_doc_allowance where doc_id ='" + value.doc_id + "'  ";
             conn_ExecuteData(ref dtallowance, sqlstr);
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.airticket_booking.Count > 0)
             {
                 sqlstr_all = "";
@@ -2280,13 +2765,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchAirTicket(value_load);
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -2320,7 +2805,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         List<accommodationbookList> dtlist = data.accommodation_booking;
                         for (int i = 0; i < dtlist.Count; i++)
                         {
-                            conn = new cls_connection_ebiz();
+                            conn = new cls_connection();
                             ret = "true";
                             var action_type = dtlist[i].action_type.ToString();
                             if (action_type == "") { continue; }
@@ -2712,13 +3197,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
 
@@ -2746,7 +3231,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 int imaxid = GetMaxID("BZ_DATA_VISA");
                 int imaxidImg = GetMaxID("BZ_DOC_IMG");
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 if (data.visa_detail.Count > 0)
                 {
@@ -2759,7 +3244,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         {
                             sqlstr = @"select count(1) as xcount from  BZ_DOC_VISA where doc_id = '" + dtlist[i].doc_id.ToString() + "'";
                             sqlstr += " and emp_id = '" + dtlist[i].emp_id.ToString() + "' ";
-                            conn = new cls_connection_ebiz();
+                            conn = new cls_connection();
                             if (SetDocService.conn_ExecuteData(ref dtdoc_check, sqlstr) == "")
                             {
                                 if (dtdoc_check != null)
@@ -3194,16 +3679,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchVisa(value_load);
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
-
-
-
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -3226,7 +3708,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 int imaxidProfile = GetMaxID("BZ_DOC_IMG");
                 DataTable dtData = CheckAllData("BZ_DATA_PASSPORT", "");
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (data.passport_detail.Count > 0)
                 {
                     string sqlster_delete_img = "";
@@ -3243,7 +3725,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         {
                             sqlstr = @"select count(1) as xcount from  BZ_DOC_PASSPORT where doc_id = '" + data.doc_id.ToString() + "'";
                             sqlstr += " and emp_id = '" + dtlist[i].emp_id.ToString() + "' ";
-                            conn = new cls_connection_ebiz();
+                            conn = new cls_connection();
                             if (SetDocService.conn_ExecuteData(ref dtdoc_check, sqlstr) == "")
                             {
                                 if (dtdoc_check != null)
@@ -3505,13 +3987,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchPassport(value_load);
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -3566,7 +4048,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 int imaxidMail = GetMaxID("BZ_DOC_ALLOWANCE_MAIL");
                 int imaxidImg = GetMaxID("BZ_DOC_IMG");
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 if (data.allowance_main.Count > 0)
                 {
                     List<allowanceList> dtlist = data.allowance_main;
@@ -3874,13 +4356,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchAllowance(value_load);
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -3905,7 +4387,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             var imaxidImg_def = imaxidImg;
             if (data.reimbursement_main.Count > 0)
             {
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 if (data.reimbursement_main.Count > 0)
                 {
@@ -4105,13 +4587,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchReimbursement(value_load);
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -4143,7 +4625,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             {
                 if (data.travelexpense_main.Count > 0)
                 {
-                    conn = new cls_connection_ebiz();
+                    conn = new cls_connection();
 
                     if (data.travelexpense_main.Count > 0)
                     {
@@ -4568,7 +5050,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                         #region กณีที่ไม่มีข้อมูลให้เพิ่มใหม่ เพื่อใช้ในการตรวจสอบ tracing
                         sqlstr = @"select count(1) as xcount from BZ_DOC_TRAVELEXPENSE where doc_id = '" + doc_id + "'";
                         dt = new DataTable();
-                        conn = new cls_connection_ebiz();
+                        conn = new cls_connection();
                         if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                         {
                             if (dt.Rows.Count > 0)
@@ -4667,13 +5149,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchTravelExpense(value_load);
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? (msg_text + " succesed." + msg_text2) : (msg_text + " data failed.");
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? (msg_text + " succesed." + msg_text2) : (msg_text + " data failed.");
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -4694,7 +5176,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 int imaxid = GetMaxID("BZ_DOC_INSURANCE");
                 int imaxidImg = GetMaxID("BZ_DOC_IMG");
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 if (data.travelInsurance_detail.Count > 0)
                 {
@@ -5091,7 +5573,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
 
 
-                    
+
                     logService.logModel mLog = new logService.logModel();
 
                     mLog.module = "SetTravelInsurance" + value.doc_id;
@@ -5117,13 +5599,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchTravelInsurance(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -5216,13 +5698,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchISOS(value_load);
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -5252,7 +5734,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                     string _Server_path = System.Configuration.ConfigurationManager.AppSettings["ServerPath_Service"].ToString();
                     string _Folder = "/DocumentFile/" + file_page + "/";
                     string _Path = "";
-                        //System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
+                    //System.Web.HttpContext.Current.Server.MapPath("~" + _Folder);
 
                     string data_isos = html_content;
                     string file_Log = _Path + content_name;
@@ -5269,7 +5751,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 int imaxid = GetMaxID("BZ_DATA_CONTENT");
                 int imaxidImg = GetMaxID("BZ_DOC_IMG");
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 if (true)
                 {
@@ -5463,13 +5945,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -5492,7 +5974,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             {
                 int imaxid = GetMaxID("BZ_DOC_FEEDBACK");
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 if (data.feedback_detail.Count > 0)
                 {
@@ -5709,13 +6191,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -5736,7 +6218,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 string action_change_imgname = data.action_change_imgname;
                 if (action_change_imgname != "")
                 {
-                    conn = new cls_connection_ebiz();
+                    conn = new cls_connection();
 
                     sqlstr = @" update BZ_DOC_PORTAL set CREATE_BY = CREATE_BY ";
                     if (action_change_imgname.ToLower() == "img_header")
@@ -5800,13 +6282,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 msg_error = ret + " --> query error :" + sqlstr;
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -5824,7 +6306,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             {
                 int imaxid = GetMaxID("BZ_DATA_MANAGE");
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 value.after_add_user = new List<userNewList>();
                 if (data.admin_list.Count > 0)
@@ -5960,13 +6442,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchManageRole(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             try
             {
@@ -5999,7 +6481,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             {
                 int imaxid = GetMaxID("BZ_DATA_KH_CODE");
 
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
 
                 List<khcodeList> dtlist = data.khcode_list;
                 for (int i = 0; i < dtlist.Count; i++)
@@ -6109,13 +6591,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchKHCode(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? msg_status + " succesed." : msg_status + " failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
 
@@ -6216,13 +6698,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 msg_error += ret;
             }
             catch (Exception ex) { msg_error += ex.Message.ToString(); ret = "false"; }
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -6342,13 +6824,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             catch (Exception ex) { msg_error = ex.Message.ToString(); ret = "false"; }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -6391,13 +6873,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 }
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -6463,13 +6945,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             SendEmailService swmail = new SendEmailService();
             ret = swmail.SendMailInPage(ref mail_list, emp_list, img_list, data.doc_id, page_name, "claim form requisition");
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -6679,13 +7161,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 }
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -6759,13 +7241,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 msg_error = ret;
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -6847,7 +7329,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 if (sqlstr != "")
                 {
                     dt = new DataTable();
-                    conn = new cls_connection_ebiz();
+                    conn = new cls_connection();
                     if (SetDocService.conn_ExecuteData(ref dt, sqlstr) == "")
                     {
                         ret = "true";
@@ -6953,13 +7435,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 msg_error += "Load Data";
 
             }
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -7006,13 +7488,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             SendEmailService swmail = new SendEmailService();
             ret = swmail.SendMailInContact(ref mail_list);
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -7040,7 +7522,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             //ทดสอบ update status = Send to SAP ทั้งหมดใน list ที่ส่งไป SAP ก่อน 
             for (int i = 0; i < data.travelexpense_detail.Count; i++)
             {
-                conn = new cls_connection_ebiz();
+                conn = new cls_connection();
                 string emp_user_active = "";
                 string id = data.travelexpense_detail[i].id;
                 string emp_id = data.travelexpense_detail[i].emp_id;
@@ -7092,13 +7574,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchTravelExpense(value_load);
             }
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send data to SAP succesed." : "Send data to SAP failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "Error msg";
-            //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send data to SAP succesed." : "Send data to SAP failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
             return data;
         }
 
@@ -7192,13 +7674,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             #endregion Auwat 20210823 0000 เพิ่มข้อมูล status ของใบงาน --> 1: Not Start, 2: Traveler, 3: Business Team, 4: Completed
 
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+            data.after_trip.opt3.status = "Error msg";
+            data.after_trip.opt3.remark = msg_error;
 
 
             return data;
