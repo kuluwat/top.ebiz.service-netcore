@@ -37,7 +37,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<MStatusModel> dtm_expense_type { get; set; } = new List<MStatusModel>();
         public List<MStatusModel> dtm_status { get; set; } = new List<MStatusModel>();
       
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class travelexpenseList
     {

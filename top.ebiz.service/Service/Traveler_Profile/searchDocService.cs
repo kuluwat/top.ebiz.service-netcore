@@ -7739,13 +7739,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             catch (Exception ex) { ret = "false"; msg_error = ex.Message.ToString() + msg; }
 
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            //data.after_trip.opt2 = new subAfterTripModel();
+            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
+            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            //data.after_trip.opt3 = new subAfterTripModel();
+            //data.after_trip.opt3.status = "Error msg";
+            //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -7831,13 +7831,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             catch (Exception ex) { ret = "false"; msg_error = ex.Message.ToString() + msg; }
 
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -8571,13 +8571,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             catch (Exception ex) { ret = "false"; msg_error = ex.Message.ToString() + msg; }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -8760,13 +8760,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
             }
             catch (Exception ex) { ret = "false"; msg_error = ex.Message.ToString() + msg; }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Search data succesed." : "Search data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
             return data;
         }

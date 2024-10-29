@@ -142,13 +142,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data.m_exchangerate = dtlist;
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -258,13 +258,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchAirticketType(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -376,13 +376,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchAlreadyBooked(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -495,13 +495,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchListStatus(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -611,13 +611,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchAllowanceType(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -745,13 +745,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchFeedbackType(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -882,13 +882,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchFeedbackList(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1006,13 +1006,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchFeedbackQuestion(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1147,13 +1147,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchConfigDailyAllowance(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1280,13 +1280,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchFeedbackType(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1414,13 +1414,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchVISADocument(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1564,13 +1564,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchVISADocountries(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1690,13 +1690,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchInsurancebroker(value_load);
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "Error msg";
+           //data.after_trip.opt3.remark = msg_error;
 
 
             return data;

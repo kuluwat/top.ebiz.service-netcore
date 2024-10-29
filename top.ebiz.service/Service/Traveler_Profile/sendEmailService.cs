@@ -472,17 +472,17 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 }
             }
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel
-            {
-                status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.",
-                remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error
-            };
-            data.after_trip.opt3 = new subAfterTripModel
-            {
-                status = "Error msg",
-                remark = msg_error
-            };
+            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            //data.after_trip.opt2 = new subAfterTripModel
+            //{
+            //    status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.",
+            //    remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error
+            //};
+            //data.after_trip.opt3 = new subAfterTripModel
+            //{
+            //    status = "Error msg",
+            //    remark = msg_error
+            //};
 
             return data;
         }

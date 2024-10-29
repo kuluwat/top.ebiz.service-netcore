@@ -37,7 +37,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<MStatusModel> m_book_type { get; set; } = new List<MStatusModel>();
         public List<MStatusModel> m_room_type { get; set; } = new List<MStatusModel>();
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class accommodationbookList
     {

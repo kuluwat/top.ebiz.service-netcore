@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace top.ebiz.service.Controllers.Create_Trip
 {
+
     public class CheckConnectionController : ControllerBase
     {
         // GET: api/login
@@ -21,16 +22,16 @@ namespace top.ebiz.service.Controllers.Create_Trip
         {
             return "value";
         }
-        [IgnoreAntiforgeryToken]
-        [HttpPost("Getxxx", Name = "Getxxx")]
+        //[IgnoreAntiforgeryToken]
+        [HttpPost( Name = "Getxxx")]
         public IActionResult CheckConnection()
         { 
             return Ok("xxxx");
         }
 
         // POST: api/login 
-        [IgnoreAntiforgeryToken]
-        [HttpPost("CheckConnection", Name = "CheckConnection")]
+        //[IgnoreAntiforgeryToken]
+        [HttpPost(Name = "CheckConnection")]
         public IActionResult CheckConnection([FromBody] loginModel value)
         {
             if (value == null) return null;

@@ -17,7 +17,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public string token_login { get; set; } 
         public List<emprolelistModel> contactus { get; set; } = new List<emprolelistModel>();
         public List<emprolelistModel> emprole_list { get; set; } = new List<emprolelistModel>();
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     } 
      
     public class emprolelistModel

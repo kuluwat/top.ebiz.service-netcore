@@ -59,13 +59,13 @@ public IActionResult Post([FromBody]VisaOutModel value)
                 msg_error = ex.Message.ToString();
             }
              
-            value.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            value.after_trip.opt2 = new subAfterTripModel();
-            value.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
-            value.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            value.after_trip.opt3 = new subAfterTripModel();
-            value.after_trip.opt3.status = "Error msg";
-            value.after_trip.opt3.remark = msg_error;
+            //value.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            //value.after_trip.opt2 = new subAfterTripModel();
+            //value.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Send mail succesed." : "Send mail failed.";
+            //value.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            //value.after_trip.opt3 = new subAfterTripModel();
+            //value.after_trip.opt3.status = "Error msg";
+            //value.after_trip.opt3.remark = msg_error;
 
 
             HttpResponseMessage response = null;

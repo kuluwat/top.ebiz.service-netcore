@@ -12,8 +12,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-    //[ApiController]
+    
     //[Route("api/travel-expense-trip-cancelled")]
+    //[ApiController]
     public class SaveTravelExpenseTripCancelledController : ControllerBase
     {
         // GET: api/Controller name

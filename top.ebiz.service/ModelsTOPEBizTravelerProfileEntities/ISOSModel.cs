@@ -43,7 +43,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
 
         public List<MMasterInsurancebrokerModel> m_broker { get; set; } = new List<MMasterInsurancebrokerModel>();
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        // public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class isosList
     {
