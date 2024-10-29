@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
+﻿
+using System.ComponentModel.DataAnnotations.Schema;
+using top.ebiz.service.Models.Create_Trip;
 
 namespace top.ebiz.service.Models.Traveler_Profile
 {
@@ -30,7 +28,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<MFeedbackTypeModel> feedback_type_master { get; set; } = new List<MFeedbackTypeModel>();
         public List<MFeedbackListModel> feedback_topic_list { get; set; } = new List<MFeedbackListModel>();
 
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
+        [NotMapped] public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class feedbackList
     {

@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
-
+﻿
+using System.ComponentModel.DataAnnotations.Schema;
+using top.ebiz.service.Models.Create_Trip;
+using top.ebiz.service.Service.Create_Trip;
+ 
 namespace top.ebiz.service.Models.Traveler_Profile
 {
     public class TravelExpenseModel
@@ -36,8 +35,9 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<CurrencyList> m_currency { get; set; } = new List<CurrencyList>();
         public List<MStatusModel> dtm_expense_type { get; set; } = new List<MStatusModel>();
         public List<MStatusModel> dtm_status { get; set; } = new List<MStatusModel>();
-      
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
+
+        [NotMapped] 
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class travelexpenseList
     {

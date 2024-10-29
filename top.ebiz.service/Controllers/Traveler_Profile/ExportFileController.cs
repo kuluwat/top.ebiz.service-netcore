@@ -35,7 +35,7 @@ namespace top.ebiz.service.Controllers.Traveler_Profile
         // POST: api/ExportFile
        [IgnoreAntiforgeryToken]
         [HttpPost("ExportFile", Name = "ExportFile")]
-        public IActionResult Post([FromBody] ExportFileModel value)
+        public IActionResult Post([FromBody] ExportFileInModel value)
         {
             if (value == null) return null;
 

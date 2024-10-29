@@ -718,13 +718,13 @@ namespace top.ebiz.service.Service.Create_Trip
 
                         data.travel = docHead[0].DH_TRAVEL ?? "";
 
-                       //data.after_trip.opt1 = (docHead[0].DH_AFTER_TRIP_OPT1 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt2 = new subAfterTripModel();
-                       //data.after_trip.opt2.status = (docHead[0].DH_AFTER_TRIP_OPT2 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt2.remark = docHead[0].DH_AFTER_TRIP_OPT2_REMARK ?? "";
-                       //data.after_trip.opt3 = new subAfterTripModel();
-                       //data.after_trip.opt3.status = (docHead[0].DH_AFTER_TRIP_OPT3 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt3.remark = docHead[0].DH_AFTER_TRIP_OPT3_REMARK ?? "";
+                        data.after_trip.opt1 = (docHead[0].DH_AFTER_TRIP_OPT1 ?? "") == "Y" ? "true" : "false";
+                        data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+                        data.after_trip.opt2.status = (docHead[0].DH_AFTER_TRIP_OPT2 ?? "") == "Y" ? "true" : "false";
+                        data.after_trip.opt2.remark = docHead[0].DH_AFTER_TRIP_OPT2_REMARK ?? "";
+                        data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+                        data.after_trip.opt3.status = (docHead[0].DH_AFTER_TRIP_OPT3 ?? "") == "Y" ? "true" : "false";
+                        data.after_trip.opt3.remark = docHead[0].DH_AFTER_TRIP_OPT3_REMARK ?? "";
 
                         data.action.type = "1";
 
@@ -2894,14 +2894,13 @@ namespace top.ebiz.service.Service.Create_Trip
                             #endregion DevFix 20211013 0000 update status  
                         }
 
-
-
-                       //data.after_trip.opt1 = (docHead[0].DH_AFTER_TRIP_OPT1 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt2.status = (docHead[0].DH_AFTER_TRIP_OPT2 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt2.remark = docHead[0].DH_AFTER_TRIP_OPT2_REMARK ?? "";
-                       //data.after_trip.opt3.status = (docHead[0].DH_AFTER_TRIP_OPT3 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt3.remark = docHead[0].DH_AFTER_TRIP_OPT3_REMARK ?? "";
-
+                        data.after_trip.opt1 = (docHead[0].DH_AFTER_TRIP_OPT1 ?? "") == "Y" ? "true" : "false";
+                        data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+                        data.after_trip.opt2.status = (docHead[0].DH_AFTER_TRIP_OPT2 ?? "") == "Y" ? "true" : "false";
+                        data.after_trip.opt2.remark = docHead[0].DH_AFTER_TRIP_OPT2_REMARK ?? ""; 
+                        data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+                        data.after_trip.opt3.status = (docHead[0].DH_AFTER_TRIP_OPT3 ?? "") == "Y" ? "true" : "false";
+                        data.after_trip.opt3.remark = docHead[0].DH_AFTER_TRIP_OPT3_REMARK ?? "";
 
                         string pf_doc_status = docHead[0].doc_status.ToString().Substring(0, 1);
                         if (pf_doc_status == "1")
@@ -3565,20 +3564,21 @@ namespace top.ebiz.service.Service.Create_Trip
                         #region DevFix 20210527 0000 เพิ่มข้อมูลไฟล์แนบ
                         // sql = @" select DH_CODE, to_CHAR(DF_ID) as DF_ID, DF_NAME, DF_PATH, DF_REMARK 
                         //         from BZ_DOC_FILE where DH_CODE = '" + value.id_doc + "' order by  DF_ID ";
-                        var docFile = context.DocFileListModelList
-    .FromSqlRaw(@"SELECT DH_CODE, 
-                    TO_CHAR(DF_ID) AS DF_ID, 
-                    DF_NAME, 
-                    DF_PATH, 
-                    DF_REMARK 
-             FROM BZ_DOC_FILE 
-             WHERE DH_CODE = :id_doc 
-             ORDER BY DF_ID", context.ConvertTypeParameter("id_doc", value.id_doc, "char"))
-    .ToList();
+                        var docFile = context.DocFileListOutModelList
+                        .FromSqlRaw(@"SELECT DH_CODE, TO_CHAR(DF_ID) AS DF_ID, DF_NAME, DF_PATH, DF_REMARK 
+                                 FROM BZ_DOC_FILE 
+                                 WHERE DH_CODE = :id_doc 
+                                 ORDER BY DF_ID", context.ConvertTypeParameter("id_doc", value.id_doc, "char"))
+                        .ToList();
+
                         if (docFile.Count == 0)
                         {
+                            data.docfile = new List<DocFileListOutModel>();
                         }
-                        data.docfile = docFile;
+                        else
+                        {
+                            data.docfile = docFile;
+                        }
 
 
                         #endregion DevFix 20210527 0000 เพิ่มข้อมูลไฟล์แนบ
@@ -4447,13 +4447,15 @@ namespace top.ebiz.service.Service.Create_Trip
                             #endregion DevFix 20211013 0000 update status  
                         }
 
+                        data.after_trip.opt1 = (docHead[0].DH_AFTER_TRIP_OPT1 ?? "") == "Y" ? "true" : "false";
 
-                       //data.after_trip.opt1 = (docHead[0].DH_AFTER_TRIP_OPT1 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt2.status = (docHead[0].DH_AFTER_TRIP_OPT2 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt2.remark = docHead[0].DH_AFTER_TRIP_OPT2_REMARK ?? "";
-                       //data.after_trip.opt3.status = (docHead[0].DH_AFTER_TRIP_OPT3 ?? "") == "Y" ? "true" : "false";
-                       //data.after_trip.opt3.remark = docHead[0].DH_AFTER_TRIP_OPT3_REMARK ?? "";
+                        data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+                        data.after_trip.opt2.status = (docHead[0].DH_AFTER_TRIP_OPT2 ?? "") == "Y" ? "true" : "false";
+                        data.after_trip.opt2.remark = docHead[0].DH_AFTER_TRIP_OPT2_REMARK ?? "";
 
+                        data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel(); 
+                        data.after_trip.opt3.status = (docHead[0].DH_AFTER_TRIP_OPT3 ?? "") == "Y" ? "true" : "false";
+                        data.after_trip.opt3.remark = docHead[0].DH_AFTER_TRIP_OPT3_REMARK ?? "";
 
                         string pf_doc_status = docHead[0].doc_status.ToString().Substring(0, 1);
                         if (pf_doc_status == "1")

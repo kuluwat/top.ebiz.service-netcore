@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
+﻿
+using System.ComponentModel.DataAnnotations.Schema;
+using top.ebiz.service.Models.Create_Trip;
 
 namespace top.ebiz.service.Models.Traveler_Profile
 {
@@ -23,6 +21,6 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<MasterSectionModel> m_section  { get; set; } = new List<MasterSectionModel>();
         public List<emplistModel> emp_list { get; set; } = new List<emplistModel>();
 
-       //public afterTripModel after_trip { get; set; } = new afterTripModel();
+       [NotMapped] public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
 }

@@ -1,10 +1,11 @@
 ﻿
 using System.Data;
-using System.Data.Common; 
-using Microsoft.EntityFrameworkCore; 
+using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
 using Oracle.ManagedDataAccess.Client;
 using top.ebiz.service.Models.Create_Trip;
 using System.IO;
+using top.ebiz.service.Service.Traveler_Profile;
 
 namespace top.ebiz.service.Service.Create_Trip
 {
@@ -337,7 +338,7 @@ namespace top.ebiz.service.Service.Create_Trip
             try
             {
                 using (TOPEBizCreateTripEntities context = new TOPEBizCreateTripEntities())
-                { 
+                {
                     var query = context.AllApproveModelList.FromSqlRaw(
                         @" select case when xcount_all=xcount_approve then (case when xcount_all=xcount_cancel then 2 else 0 end) else 1 end status_value   
                              from (
@@ -5637,8 +5638,8 @@ namespace top.ebiz.service.Service.Create_Trip
                     var imaxid_docfile = 1;
                     sql = @"SELECT to_char( nvl(max(DF_ID),0)+1) as DF_ID , null as DH_CODE, null as DF_NAME, null as DF_PATH, null as DF_REMARK  FROM  BZ_DOC_FILE ";
                     parameters = new List<OracleParameter>();
-                   var maxid_docfile = context.DocFileListModelList.FromSqlRaw(sql, parameters.ToArray()).ToList(); 
-                
+                    var maxid_docfile = context.DocFileListOutModelList.FromSqlRaw(sql, parameters.ToArray()).ToList();
+
 
                     if (maxid_docfile != null && maxid_docfile.Count() > 0)
                     {
@@ -6087,7 +6088,7 @@ namespace top.ebiz.service.Service.Create_Trip
                             if (value.docfile.Count > 0)
                             {
                                 //delete --> insert 
-                                List<DocFileListModel> docfileList = value.docfile;
+                                List<DocFileListInModel> docfileList = value.docfile;
                                 sql = " delete from BZ_DOC_FILE where DH_CODE = :doc_id ";
 
                                 parameters = new List<OracleParameter>();
@@ -7531,7 +7532,7 @@ namespace top.ebiz.service.Service.Create_Trip
                                                 //file แนบ Any file attached  
                                                 if (value.docfile.Count > 0)
                                                 {
-                                                    List<DocFileListModel> docfileList = value.docfile;
+                                                    List<DocFileListInModel> docfileList = value.docfile;
                                                     foreach (var item in docfileList)
                                                     {
                                                         string file_name = item.DF_NAME;// @"EMPLOYEE LETTER_TOP_Mr._Luck_Saraya_180521102605.docx";
@@ -8035,7 +8036,7 @@ namespace top.ebiz.service.Service.Create_Trip
             return date;
         }
 
-        public DocFileListModel uploadfile()
+        public DocFileListOutModel uploadfile()
         {
             //??? ต้องปรับ function ใหม่ 
 
@@ -8121,30 +8122,19 @@ namespace top.ebiz.service.Service.Create_Trip
 
             //next_line_1:;
 
-            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            //data.after_trip.opt2 = new subAfterTripModel();
-            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
-            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            //data.after_trip.opt3 = new subAfterTripModel();
-            //data.after_trip.opt3.status = "SaveAs FullPathName";
-            //data.after_trip.opt3.remark = _FullPathName;
 
-
-
-            //??? แก้ไขเพื่อให้ run ผ่านก่อน
-            var data = new DocFileListModel(); 
+            //??? แก้ไขเพื่อให้ run ผ่านก่อน 
             string msg_error = "";
             string msg_rows = "";
             string ret = "";
             string _FullPathName = "";
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "SaveAs FullPathName";
-           //data.after_trip.opt3.remark = _FullPathName;
+            var data = new DocFileListOutModel();
+            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
+            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            data.after_trip.opt3.status = "SaveAs FullPathName";
+            data.after_trip.opt3.remark = _FullPathName;
 
             return data;
         }

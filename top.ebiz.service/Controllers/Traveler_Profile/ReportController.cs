@@ -12,63 +12,63 @@ using top.ebiz.service.Service.Traveler_Profile;
 
 namespace top.ebiz.service.Controllers.Traveler_Profile
 {
-   // [ApiController]
+    // [ApiController]
     //[Route("api/[controller]")]
     public class ReportController : ControllerBase
     {
         // GET: api/Controller name
-       
-public IEnumerable<string> Get()
-{
-    return new string[] { "value1", "value2" };
-}
 
-// GET: api/Controller name/5
+        public IEnumerable<string> Get()
+        {
+            return new string[] { "value1", "value2" };
+        }
 
-public string Get(int id)
-{
-    return "value";
-}
+        // GET: api/Controller name/5
+
+        public string Get(int id)
+        {
+            return "value";
+        }
 
 
-               // POST: api/Controller name
-       [IgnoreAntiforgeryToken]
+        // POST: api/Controller name
+        [IgnoreAntiforgeryToken]
         [HttpPost("Report", Name = "Report")]
-public IActionResult Post([FromBody]ExportFileModel value)
+        public IActionResult Post([FromBody] ExportFileInModel value)
         {
             if (value == null) return null;
 
             var pagename = value.pagename;
 
-            
+
             ExportReportService service = new ExportReportService();
             HttpResponseMessage response = null;
-             
+
             logService.logModel mLog = new logService.logModel();
             mLog.module = "Report";
             mLog.tevent = "review " + pagename;
             mLog.ref_id = 0;
             mLog.data_log = JsonSerializer.Serialize(value);
             logService.insertLog(mLog);
-             
-            Object result = null;  
+
+            Object result = null;
             result = service.repoprt_data_allowance(value);
 
             string json = JsonSerializer.Serialize(result);
 
-                return Ok(json);
-}
+            return Ok(json);
+        }
 
-// PUT: api/Controller name/5
+        // PUT: api/Controller name/5
 
-public void Put(int id, [FromBody] string value)
-{
-}
+        public void Put(int id, [FromBody] string value)
+        {
+        }
 
-// DELETE: api/Controller name/5
+        // DELETE: api/Controller name/5
 
-public void Delete(int id)
-{
-}
-}
+        public void Delete(int id)
+        {
+        }
+    }
 }

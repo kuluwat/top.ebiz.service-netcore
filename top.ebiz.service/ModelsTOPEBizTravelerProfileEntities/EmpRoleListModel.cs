@@ -1,30 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
+﻿
+using System.ComponentModel.DataAnnotations.Schema;
+using top.ebiz.service.Models.Create_Trip;
 
 namespace top.ebiz.service.Models.Traveler_Profile
 {
     public class EmpRoleListModel
     {
         public string token_login { get; set; }
-        public string filter_value { get; set; } 
+        public string filter_value { get; set; }
     }
 
     public class EmpRoleListOutModel
-    { 
-        public string token_login { get; set; } 
+    {
+        public string token_login { get; set; }
         public List<emprolelistModel> contactus { get; set; } = new List<emprolelistModel>();
         public List<emprolelistModel> emprole_list { get; set; } = new List<emprolelistModel>();
-        //public afterTripModel after_trip { get; set; } = new afterTripModel();
-    } 
-     
+
+        [NotMapped]
+        public afterTripModel after_trip { get; set; } = new afterTripModel();
+    }
+
     public class emprolelistModel
     {
         public string id { get; set; }
         public string emp_id { get; set; }
-        public string username { get; set; } 
+        public string username { get; set; }
 
         public string name_th { get; set; }
         public string name_en { get; set; }

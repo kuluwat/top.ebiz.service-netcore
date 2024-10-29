@@ -21,7 +21,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
     public class SetMasterDataService
     {
         SetDocService sw;
-        cls_connection_ebiz conn;
+        //cls_connection conn;
         string sqlstr = "";
         string sqlstr_all = "";
         string ret = "";
@@ -42,7 +42,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_DATA_FX_TYPE_M");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
 
             if (data.data_type.ToString() != "")
             {
@@ -142,13 +142,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data.m_exchangerate = dtlist;
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -164,7 +164,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_ALREADY_BOOKED_TYPE");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -258,13 +258,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchAirticketType(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -282,7 +282,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_ALREADY_BOOKED_TYPE");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
 
             if (data.data_type.ToString() != "")
             {
@@ -376,13 +376,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchAlreadyBooked(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -399,7 +399,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_LIST_STATUS");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -495,13 +495,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchListStatus(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -518,7 +518,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_ALLOWANCE_TYPE");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -611,13 +611,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchAllowanceType(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -636,7 +636,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_FEEDBACK_TYPE");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -745,13 +745,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchFeedbackType(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -769,7 +769,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_FEEDBACK_LIST");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -882,13 +882,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchFeedbackList(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -905,7 +905,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_FEEDBACK_QUESTION");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -1006,13 +1006,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchFeedbackQuestion(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1030,7 +1030,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_CONFIG_DAILY_ALLOWANCE");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -1147,13 +1147,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchConfigDailyAllowance(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1171,7 +1171,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_FEEDBACK_TYPE");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -1280,13 +1280,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchFeedbackType(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1303,7 +1303,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_VISA_DOCUMENT");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -1414,13 +1414,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchVISADocument(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1438,7 +1438,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             int imaxid = sw.GetMaxID("BZ_MASTER_VISA_DOCOUNTRIES");
             int imaxidImg = sw.GetMaxID("BZ_DOC_IMG");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -1564,13 +1564,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchVISADocountries(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;
@@ -1587,7 +1587,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
             sw = new SetDocService();
             int imaxid = sw.GetMaxID("BZ_MASTER_INSURANCE_COMPANY");
 
-            conn = new cls_connection_ebiz();
+            conn = new cls_connection();
             if (data.data_type.ToString() != "")
             {
                 sqlstr_all = "";
@@ -1690,13 +1690,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 data = swd.SearchInsurancebroker(value_load);
             }
 
-           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-           //data.after_trip.opt2 = new subAfterTripModel();
-           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
-           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-           //data.after_trip.opt3 = new subAfterTripModel();
-           //data.after_trip.opt3.status = "Error msg";
-           //data.after_trip.opt3.remark = msg_error;
+           data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           data.after_trip.opt2 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Save data succesed." : "Save data failed.";
+           data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           data.after_trip.opt3 = new Models.Create_Trip.subAfterTripModel();
+           data.after_trip.opt3.status = "Error msg";
+           data.after_trip.opt3.remark = msg_error;
 
 
             return data;

@@ -21,7 +21,12 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public string date_from { get; set; }
         public string date_to { get; set; } 
         public string remark { get; set; }
-    } 
+    }
+    public class actionModel
+    {
+        public string type { get; set; }
+        public string remark { get; set; }
+    }
 
 
 

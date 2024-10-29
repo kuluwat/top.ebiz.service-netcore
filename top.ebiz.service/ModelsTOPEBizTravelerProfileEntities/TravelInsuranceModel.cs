@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-
+﻿
+using System.ComponentModel.DataAnnotations.Schema;
+using top.ebiz.service.Models.Create_Trip;
 
 namespace top.ebiz.service.Models.Traveler_Profile
 {
@@ -40,7 +38,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<MStatusModel> m_broker { get; set; } = new List<MStatusModel>();
         public List<MStatusModel> m_insurance_plan { get; set; } = new List<MStatusModel>();
 
-       //public afterTripModel after_trip { get; set; } = new afterTripModel();
+       [NotMapped] public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class travelinsuranceList
     {

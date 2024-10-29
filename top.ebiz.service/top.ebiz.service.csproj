@@ -9,6 +9,13 @@
   <ItemGroup>
     <Compile Remove="Controllers\CreateFlowController.cs" />
     <Compile Remove="Controllers\SAPZTHROMB004Controller.cs" />
+    <Compile Remove="Controllers\Traveler_Profile\CompanyController.cs" />
+    <Compile Remove="Controllers\Traveler_Profile\loginAutoController.cs" />
+    <Compile Remove="Controllers\Traveler_Profile\loginController.cs" />
+    <Compile Remove="Controllers\Traveler_Profile\loginProfileController.cs" />
+    <Compile Remove="Controllers\Traveler_Profile\loginWebController.cs" />
+    <Compile Remove="Controllers\Traveler_Profile\UploadFileController.cs" />
+    <Compile Remove="ModelsTOPEBizTravelerProfileEntities\DocModel.cs" />
     <Compile Remove="Service\SAPService.cs" />
     <Compile Remove="Service\SAP_ZTHRTEB004.asmx.cs" />
     <Compile Remove="Service\SAP_ZTHRTEB020.asmx.cs" />
@@ -21,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="EPPlus.Core" Version="1.5.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.10">
       <PrivateAssets>all</PrivateAssets>
@@ -37,7 +45,6 @@
   <ItemGroup>
     <Folder Include="Controllers\Traveler_Profile\" />
     <Folder Include="Models\Traveler_Profile\" />
-    <Folder Include="Service\Traveler_Profile\" />
     <Folder Include="temp\" />
   </ItemGroup>
 
