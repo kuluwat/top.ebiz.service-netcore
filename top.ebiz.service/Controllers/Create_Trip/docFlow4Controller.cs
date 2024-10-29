@@ -21,7 +21,7 @@ namespace top.ebiz.service.Controllers.Create_Trip
 
         // POST: api/docFlow4 
        [IgnoreAntiforgeryToken]
-        [HttpPost("CheckConnection", Name = "CheckConnection")]
+        [HttpPost("DocFlow4", Name = "DocFlow4")]
         public IActionResult Post([FromBody] DocFlow3Model value)
         {
             if (value == null) return null;

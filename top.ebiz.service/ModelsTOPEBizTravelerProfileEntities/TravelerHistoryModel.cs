@@ -133,7 +133,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<travelerEmpList> traveler_emp { get; set; } = new List<travelerEmpList>();
         public List<travelerHistoryList> arrTraveler { get; set; } = new List<travelerHistoryList>();
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+       //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
 
 

@@ -22,7 +22,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
 
         public List<khcodeList> khcode_list { get; set; } = new List<khcodeList>();
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
         public string remark { get; set; }
     }
     public class khcodeList
@@ -56,7 +56,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public string url { get; set; }
         public string uploadBy { get; set; }
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
         public string remark { get; set; }
 
         //   {

@@ -25,6 +25,8 @@ namespace top.ebiz.service.Models.Create_Trip
 
     public class docFlow2_data
     {
+       
+         
         public List<docFlow2_travel> traveler { get; set; }
         public List<docFlow2_approve> approver { get; set; }
         public bool checkbox_1 { get; set; }

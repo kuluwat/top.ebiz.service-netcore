@@ -42,7 +42,7 @@ public IActionResult Post([FromBody]TrackingModel value)
 
             string json = null;
 
-                return Ok(json);
+                return Ok();
 }
 
 // PUT: api/Controller name/5

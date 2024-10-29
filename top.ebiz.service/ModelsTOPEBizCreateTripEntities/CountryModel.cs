@@ -9,6 +9,8 @@ namespace top.ebiz.service.Models.Create_Trip
     public class CountryModel
     {
         public string token_login { get; set; }
+
+        
         public List<continentID> continent { get; set; }
     }
 

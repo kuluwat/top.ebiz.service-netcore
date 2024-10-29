@@ -43,7 +43,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<MasterCountryModel> country_doc { get; set; } = new List<MasterCountryModel>();
 
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+       //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class visaList
     {

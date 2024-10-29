@@ -9,6 +9,7 @@ using System.IO;
 using top.ebiz.service.Models.Traveler_Profile;
 using OfficeOpenXml;
 
+
 namespace top.ebiz.service.Service.Traveler_Profile 
 {
     public class ExportFileModel
@@ -23,7 +24,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
         public string actionname { get; set; }
         public string filetype { get; set; }//excel,pdf
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class ExportISOSModel
     {
@@ -37,14 +38,14 @@ namespace top.ebiz.service.Service.Traveler_Profile
         public string actionname { get; set; }
         public string filetype { get; set; }//excel,pdf
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class ExportRecordModel
     {
         public string token_login { get; set; }
         public string year { get; set; }
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
 
     public class Report_AllowanceModel
@@ -87,7 +88,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         public List<dailyallowanceModel> dailyallowance { get; set; } = new List<dailyallowanceModel>();
         public List<flightscheduleModel> flightschedule { get; set; } = new List<flightscheduleModel>();
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
 
     }
     public class dailyallowanceModel
@@ -130,7 +131,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         public List<reportisosList> details_list { get; set; } = new List<reportisosList>();
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class ReportInsuranceRecordOutModel
     {
@@ -139,7 +140,7 @@ namespace top.ebiz.service.Service.Traveler_Profile
 
         public List<insuranceModel> details_list { get; set; } = new List<insuranceModel>();
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class reportisosList
     {
@@ -239,12 +240,12 @@ namespace top.ebiz.service.Service.Traveler_Profile
             data.path = _Server_path + _Folder;
             data.filename = _FileName;
 
-            data.after_trip.opt1 = (ret ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret ?? "") == "true" ? "Upload file succesed." : "Export file failed.";
-            data.after_trip.opt2.remark = (ret ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "";
+            //data.after_trip.opt1 = (ret ?? "") == "true" ? "true" : "false";
+            //data.after_trip.opt2 = new subAfterTripModel();
+            //data.after_trip.opt2.status = (ret ?? "") == "true" ? "Upload file succesed." : "Export file failed.";
+            //data.after_trip.opt2.remark = (ret ?? "") == "true" ? "" : msg_error;
+            //data.after_trip.opt3 = new subAfterTripModel();
+            //data.after_trip.opt3.status = "";
             //data.after_trip.opt3.remark = _PathFileSave;
 
             return data;
@@ -846,13 +847,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 ret = "true";
             }
             catch (Exception ex) { msg_error = ex.Message.ToString(); data.token_login = msg_error; }
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            //data.after_trip.opt2 = new subAfterTripModel();
+            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
+            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            //data.after_trip.opt3 = new subAfterTripModel();
+            //data.after_trip.opt3.status = "Error msg";
+            //data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -1057,13 +1058,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 ret = "true";
             }
             catch (Exception ex) { msg_error = ex.Message.ToString(); data.token_login = msg_error; }
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            //data.after_trip.opt2 = new subAfterTripModel();
+            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
+            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            //data.after_trip.opt3 = new subAfterTripModel();
+            //data.after_trip.opt3.status = "Error msg";
+            //data.after_trip.opt3.remark = msg_error;
 
             return data;
         }
@@ -1149,13 +1150,13 @@ namespace top.ebiz.service.Service.Traveler_Profile
                 ret = "true";
             }
             catch (Exception ex) { msg_error = ex.Message.ToString(); data.token_login = msg_error; }
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "Error msg";
-            data.after_trip.opt3.remark = msg_error;
+            //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+            //data.after_trip.opt2 = new subAfterTripModel();
+            //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Export report succesed." : "Export report failed.";
+            //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+            //data.after_trip.opt3 = new subAfterTripModel();
+            //data.after_trip.opt3.status = "Error msg";
+            //data.after_trip.opt3.remark = msg_error;
 
             return data;
         }

@@ -30,16 +30,6 @@ public string Get(int id)
     return "value";
 }
 
-
-        // PUT: api/Controller name/5
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE: api/Controller name/5
-        public void Delete(int id)
-        {
-        }
         // POST: api/Controller name
        [IgnoreAntiforgeryToken]
         [HttpPost("CheckUserAD", Name = "CheckUserAD")]
@@ -67,6 +57,17 @@ public IActionResult Post([FromBody] ADUserModel value)
 
             return Ok(json);
         }
+
+        // PUT: api/Controller name/5
+        public void Put(int id, [FromBody] string value)
+        {
+        }
+
+        // DELETE: api/Controller name/5
+        public void Delete(int id)
+        {
+        }
+
         public class ADUserModel
         {
             public string UserName { get; set; }

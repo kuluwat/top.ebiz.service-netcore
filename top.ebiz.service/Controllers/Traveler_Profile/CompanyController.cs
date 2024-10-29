@@ -1,63 +1,63 @@
-﻿using System.Net;
-using System.Net.Http;
-using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
-using top.ebiz.service.Models.Traveler_Profile;
-using top.ebiz.service.Service.Traveler_Profile;
+﻿//using System.Net;
+//using System.Net.Http;
+//using System.Text.Json;
+//using Microsoft.AspNetCore.Mvc;
+//using top.ebiz.service.Models.Traveler_Profile;
+//using top.ebiz.service.Service.Traveler_Profile;
 
-namespace top.ebiz.service.Controllers.Traveler_Profile
-{
-   // [ApiController]
-    //[Route("api/[controller]")]
-    public class CompanyController : ControllerBase
-    {
-        private readonly logService _logService;
-        private readonly SetDocService _setDocService;
+//namespace top.ebiz.service.Controllers.Traveler_Profile
+//{
+//   // [ApiController]
+//    //[Route("api/[controller]")]
+//    public class CompanyController : ControllerBase
+//    {
+//        private readonly logService _logService;
+//        private readonly SetDocService _setDocService;
 
-        // Constructor Injection for services
-        public CompanyController(logService logService, SetDocService setDocService)
-        {
-            _logService = logService;
-            _setDocService = setDocService;
-        }
+//        // Constructor Injection for services
+//        public CompanyController(logService logService, SetDocService setDocService)
+//        {
+//            _logService = logService;
+//            _setDocService = setDocService;
+//        }
 
-        // GET: api/Company
+//        // GET: api/Company
        
-        public IEnumerable<string> Get()
-        {
-            return new string[] { "value1", "value2" };
-        }
+//        public IEnumerable<string> Get()
+//        {
+//            return new string[] { "value1", "value2" };
+//        }
 
-        // GET: api/Company/5
+//        // GET: api/Company/5
         
-        public string Get(int id)
-        {
-            return "value";
-        }
+//        public string Get(int id)
+//        {
+//            return "value";
+//        }
 
-        // POST: api/Company
-       [IgnoreAntiforgeryToken]
-        [HttpPost("Company", Name = "Company")]
-        public IActionResult Post([FromBody] CompanyModel value)
-        {
-            if (value == null)
-            {
-                return BadRequest("Input cannot be null.");
-            }
-            var json = JsonSerializer.Serialize(value);
-            return Ok(json);
-        }
+//        // POST: api/Company
+//       [IgnoreAntiforgeryToken]
+//        [HttpPost("Company-Traveler-Profile", Name = "Company-Traveler-Profile")]
+//        public IActionResult Post([FromBody] CompanyModel value)
+//        {
+//            if (value == null)
+//            {
+//                return BadRequest("Input cannot be null.");
+//            }
+//            var json = JsonSerializer.Serialize(value);
+//            return Ok(json);
+//        }
 
-        // PUT: api/Company/5
+//        // PUT: api/Company/5
         
-        public void Put(int id, [FromBody] string value)
-        {
-        }
+//        public void Put(int id, [FromBody] string value)
+//        {
+//        }
 
-        // DELETE: api/Company/5
+//        // DELETE: api/Company/5
         
-        public void Delete(int id)
-        {
-        }
-    }
-}
+//        public void Delete(int id)
+//        {
+//        }
+//    }
+//}

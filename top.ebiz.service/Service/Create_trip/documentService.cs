@@ -8138,13 +8138,13 @@ namespace top.ebiz.service.Service.Create_Trip
             string ret = "";
             string _FullPathName = "";
 
-            data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
-            data.after_trip.opt2 = new subAfterTripModel();
-            data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
-            data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
-            data.after_trip.opt3 = new subAfterTripModel();
-            data.after_trip.opt3.status = "SaveAs FullPathName";
-            data.after_trip.opt3.remark = _FullPathName;
+           //data.after_trip.opt1 = (ret.ToLower() ?? "") == "true" ? "true" : "false";
+           //data.after_trip.opt2 = new subAfterTripModel();
+           //data.after_trip.opt2.status = (ret.ToLower() ?? "") == "true" ? "Upload file succesed." : "Upload file failed.";
+           //data.after_trip.opt2.remark = (ret.ToLower() ?? "") == "true" ? "" : msg_error;
+           //data.after_trip.opt3 = new subAfterTripModel();
+           //data.after_trip.opt3.status = "SaveAs FullPathName";
+           //data.after_trip.opt3.remark = _FullPathName;
 
             return data;
         }

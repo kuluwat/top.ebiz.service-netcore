@@ -40,7 +40,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<approvalbyList> approval_by { get; set; } = new List<approvalbyList>();
         public List<approvaldetailsList> approval_details { get; set; } = new List<approvaldetailsList>();
          
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+       //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
     public class traveldetailsList
     {

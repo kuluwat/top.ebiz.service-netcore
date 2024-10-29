@@ -23,6 +23,6 @@ namespace top.ebiz.service.Models.Traveler_Profile
 
         public string action_type { get; set; }
         public string action_change { get; set; }
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+       //public afterTripModel after_trip { get; set; } = new afterTripModel();
     } 
 }

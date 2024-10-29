@@ -26,7 +26,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public string mail_business_location { get; set; }
         public Boolean test_send_email { get; set; }
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
 
     public class EmailModel
@@ -41,7 +41,7 @@ namespace top.ebiz.service.Models.Traveler_Profile
         public List<emailList> email_list { get; set; } = new List<emailList>();
         public List<ImgList> file_list { get; set; } = new List<ImgList>();
 
-        public afterTripModel after_trip { get; set; } = new afterTripModel();
+        //public afterTripModel after_trip { get; set; } = new afterTripModel();
     }
 
     public class emailList

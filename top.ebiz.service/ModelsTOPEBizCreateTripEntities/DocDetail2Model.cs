@@ -40,6 +40,8 @@ namespace top.ebiz.service.Models.Create_Trip
     }
     public class TypeModel
     {
+       
+         
         public List<employeeDoc2Model> employee { get; set; } = new List<employeeDoc2Model>();
         public List<travelerDoc2Model> traveler { get; set; } = new List<travelerDoc2Model>();
         public List<doc2ApproverModel> approver { get; set; } = new List<doc2ApproverModel>();
